@@ -106,8 +106,20 @@ const demoMode = () =>
  * project is unconfigured we treat every visitor as signed out rather than
  * crashing the whole site trying to build a client with empty credentials.
  */
-const supabaseReady = () =>
-  Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+function supabaseConfig(): { url: string; key: string } | null {
+  // Trimmed: a value pasted into a dashboard field often carries a trailing
+  // space or newline, and an untrimmed URL fails to parse.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (!url || !key) return null;
+  try {
+    new URL(url); // throws on a malformed value, which would crash the client
+  } catch {
+    console.error('[middleware] NEXT_PUBLIC_SUPABASE_URL is not a valid URL');
+    return null;
+  }
+  return { url, key };
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -135,10 +147,14 @@ export async function middleware(request: NextRequest) {
     );
   }
 
+  const isProtectedPath = pathname === '/app' || pathname.startsWith('/app/');
+
+  const config = supabaseConfig();
+
   // Not connected to a database yet: public pages work, the app sends you to
   // the login screen, which explains what is still missing.
-  if (!supabaseReady()) {
-    if (pathname === '/app' || pathname.startsWith('/app/')) {
+  if (!config) {
+    if (isProtectedPath) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.search = '?setup=1';
@@ -150,39 +166,49 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   // Refresh the Supabase session and propagate any rotated cookies.
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookies: CookieToSet[]) => {
-          cookies.forEach(({ name, value }: CookieToSet) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookies.forEach(({ name, value, options }: CookieToSet) =>
-            response.cookies.set(name, value, {
-              ...options,
-              httpOnly: true,
-              sameSite: 'lax',
-              secure: process.env.NODE_ENV === 'production',
-              path: '/',
-            }),
-          );
+  //
+  // Everything from here is wrapped: middleware runs on EVERY request, so an
+  // exception here takes down the marketing site, the privacy policy and the
+  // login page along with the app. Auth failing should log the visitor out,
+  // not black out the site.
+  let user = null;
+  try {
+    const supabase = createServerClient(
+      config.url,
+      config.key,
+      {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookies: CookieToSet[]) => {
+            cookies.forEach(({ name, value }: CookieToSet) => request.cookies.set(name, value));
+            response = NextResponse.next({ request });
+            cookies.forEach(({ name, value, options }: CookieToSet) =>
+              response.cookies.set(name, value, {
+                ...options,
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: process.env.NODE_ENV === 'production',
+                path: '/',
+              }),
+            );
+          },
         },
       },
-    },
-  );
+    );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+  } catch (error) {
+    // Supabase unreachable, key rejected, or the SDK threw. Treat as signed
+    // out: public pages still render, protected pages redirect to login.
+    console.error('[middleware] auth check failed:', (error as Error).message);
+  }
 
   // Only the signed-in app is gated. The marketing site, legal pages and
   // login must stay public — Google's OAuth review has to reach them, and
   // they need to be indexable. API routes answer with JSON 401 themselves,
   // so they are excluded to avoid returning an HTML redirect to a fetch.
-  const isProtected = pathname === '/app' || pathname.startsWith('/app/');
-  if (!user && isProtected) {
+  if (!user && isProtectedPath) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = `?next=${encodeURIComponent(pathname)}`;
