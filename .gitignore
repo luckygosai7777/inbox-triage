@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------- secrets
+# Anything matching these is a credential. Keep them off GitHub — a public repo
+# with a real .env is scraped by bots within minutes.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+
+# ------------------------------------------------------------------ Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+*.sqlite3
+backend/media/
+
+# -------------------------------------------------------------------- Node
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------------ Vercel
+.vercel
+
+# ----------------------------------------------------------- editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------------------------------ local
+# Scratch files and anything ad hoc
+*.local
+.cache/
+coverage/

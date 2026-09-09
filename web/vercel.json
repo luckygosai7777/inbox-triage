@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "crons": [
+    { "path": "/api/cron/sync", "schedule": "0 * * * *" },
+    { "path": "/api/cron/digest", "schedule": "5 * * * *" }
+  ]
+}
