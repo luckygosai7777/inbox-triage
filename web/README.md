@@ -143,8 +143,14 @@ The product only works if it runs without you. Two Vercel Crons, declared in
 
 | Schedule | Endpoint | What it does |
 |---|---|---|
-| Hourly | `/api/cron/sync` | Syncs the 5 stalest accounts. Skips anything synced in the last 45 min, and disables an account after 5 consecutive failures so a disconnected user is not retried forever. |
-| Hourly | `/api/cron/digest` | Emails whoever's chosen hour just arrived **in their own timezone** — which is why it runs hourly, not daily. |
+| Daily 06:00 UTC | `/api/cron/sync` | Syncs the 5 stalest accounts. Skips anything synced in the last 45 min, and disables an account after 5 consecutive failures so a disconnected user is not retried forever. |
+| Daily 06:30 UTC | `/api/cron/digest` | Emails users whose chosen digest hour matches. |
+
+> **Vercel Hobby only runs cron jobs once per day**, so these are set daily. The
+> digest logic is timezone-aware and designed for an hourly trigger — on Hobby it
+> only reaches users whose digest hour lines up with the single daily run. On Pro,
+> change both schedules to `0 * * * *` and every user gets it at their own 8am.
+> The sync batch size (5 accounts) also assumes hourly; raise it if you stay daily.
 
 Both are protected by `CRON_SECRET` using a constant-time comparison, and
 **refuse to run if the secret is unset** rather than executing open.
