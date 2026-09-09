@@ -61,8 +61,12 @@ export async function serverClient() {
             }),
           );
         } catch {
-          // Called from a Server Component, where cookies are read-only. The
-          // middleware refreshes the session instead, so this is safe to skip.
+          // Server Components cannot write cookies, so a token rotated during
+          // this render cannot be persisted here. That is fine: every page in
+          // the app fetches from a Route Handler, which uses this same client
+          // and *can* write, so the rotated token is persisted there instead.
+          // Middleware deliberately does not refresh - see the note in
+          // middleware.ts about why it does no Supabase work at all.
         }
       },
     },

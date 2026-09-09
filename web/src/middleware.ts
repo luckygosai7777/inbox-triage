@@ -1,24 +1,37 @@
 /**
- * Edge middleware: security headers, auth session refresh, and origin checks.
+ * Edge middleware: security headers, CSRF origin checks, and a cheap auth gate.
  *
- * This runs before every request. Three jobs:
+ * DESIGN NOTE — why there is no Supabase SDK call here.
  *
- *  1. Security headers on every response — CSP, HSTS, frame denial, etc. Doing
- *     it here rather than per-route means a new page cannot forget them.
- *  2. Refreshing the Supabase session cookie, so a logged-in user is not thrown
- *     out when their access token expires mid-session.
- *  3. Rejecting cross-origin state-changing requests. Supabase auth uses cookies,
- *     and a SameSite=Lax cookie is still sent on top-level POST navigations, so
- *     an Origin check is the backstop against CSRF.
+ * The obvious implementation calls `supabase.auth.getUser()` in middleware to
+ * decide whether someone is signed in. That is what the first version did, and
+ * it was wrong twice over:
+ *
+ *   1. Middleware runs on EVERY request. A network round trip to Supabase on
+ *      every page load, every asset, every robots.txt fetch is latency nobody
+ *      asked for.
+ *   2. Middleware failing takes down the whole site. When the Supabase
+ *      credentials were first added, the SDK threw in the edge runtime and every
+ *      route returned MIDDLEWARE_INVOCATION_FAILED — the landing page, the
+ *      pricing page and the privacy policy included, none of which have anything
+ *      to do with authentication.
+ *
+ * So middleware now only looks for the *presence* of a Supabase session cookie.
+ * That is a fast, local, cannot-fail check, and it is enough to redirect an
+ * obviously-signed-out visitor away from the app.
+ *
+ * This is NOT the security boundary. A forged cookie gets past this check and
+ * then hits `currentUser()` in the page or route handler, which calls
+ * `supabase.auth.getUser()` and cryptographically validates the JWT against
+ * Supabase. Row Level Security is the layer under that. The middleware check is
+ * a UX shortcut, not a lock.
  */
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-/** What Supabase hands back to `setAll`. */
-type CookieToSet = { name: string; value: string; options?: Record<string, unknown> };
-
+const demoMode = () =>
+  process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
 
 /**
  * Content Security Policy.
@@ -30,7 +43,7 @@ type CookieToSet = { name: string; value: string; options?: Record<string, unkno
  * could not exfiltrate to an attacker's host even if one ran.
  */
 function contentSecurityPolicy(): string {
-  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+  const supabase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const supabaseWs = supabase.replace(/^https/, 'wss');
   const dev = process.env.NODE_ENV !== 'production';
 
@@ -54,24 +67,17 @@ function contentSecurityPolicy(): string {
 function applySecurityHeaders(response: NextResponse): NextResponse {
   const headers = response.headers;
   headers.set('Content-Security-Policy', contentSecurityPolicy());
-  // Clickjacking: the app is never legitimately framed.
   headers.set('X-Frame-Options', 'DENY');
-  // Stop browsers guessing a different content type than we declared.
   headers.set('X-Content-Type-Options', 'nosniff');
-  // Do not leak the path a user came from to third parties.
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  // Nothing here needs these capabilities.
   headers.set(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
   );
-  // Isolate the browsing context from cross-origin popups it opens.
   headers.set('Cross-Origin-Opener-Policy', 'same-origin');
   headers.set('X-DNS-Prefetch-Control', 'off');
 
   if (process.env.NODE_ENV === 'production') {
-    // Two years, subdomains included. Only in production — sending HSTS from
-    // localhost would pin http://localhost to https for the developer.
     headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   }
   return response;
@@ -79,8 +85,8 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 
 function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get('origin');
-  // Same-origin fetches from older browsers may omit Origin; fall back to Referer.
   if (!origin) {
+    // Same-origin fetches from older browsers may omit Origin; fall back to Referer.
     const referer = request.headers.get('referer');
     if (!referer) return false;
     try {
@@ -90,42 +96,31 @@ function isSameOrigin(request: NextRequest): boolean {
     }
   }
   const allowed = new Set([request.nextUrl.origin]);
-  if (process.env.APP_URL) allowed.add(process.env.APP_URL.replace(/\/$/, ''));
+  const configured = process.env.APP_URL?.trim();
+  if (configured) allowed.add(configured.replace(/\/$/, ''));
   return allowed.has(origin);
 }
 
-const demoMode = () =>
-  process.env.DEMO_MODE === 'true' && process.env.NODE_ENV !== 'production';
-
 /**
- * Has Supabase been set up yet?
+ * Does the request carry a Supabase session cookie?
  *
- * A brand-new deploy has no database. The marketing site, pricing and legal
- * pages must still render — Google's OAuth review has to be able to read the
- * privacy policy before you have finished wiring anything up. So when the
- * project is unconfigured we treat every visitor as signed out rather than
- * crashing the whole site trying to build a client with empty credentials.
+ * Supabase names them `sb-<project-ref>-auth-token`, and splits large ones into
+ * `.0`, `.1` chunks. Matching on the shape rather than a hardcoded project ref
+ * means this keeps working if the project changes.
+ *
+ * Presence only — the value is never trusted. Validation happens server-side.
  */
-function supabaseConfig(): { url: string; key: string } | null {
-  // Trimmed: a value pasted into a dashboard field often carries a trailing
-  // space or newline, and an untrimmed URL fails to parse.
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-  if (!url || !key) return null;
-  try {
-    new URL(url); // throws on a malformed value, which would crash the client
-  } catch {
-    console.error('[middleware] NEXT_PUBLIC_SUPABASE_URL is not a valid URL');
-    return null;
-  }
-  return { url, key };
+function hasSessionCookie(request: NextRequest): boolean {
+  return request.cookies
+    .getAll()
+    .some((cookie) => /^sb-.+-auth-token(\.\d+)?$/.test(cookie.name) && cookie.value.length > 0);
 }
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isProtected = pathname === '/app' || pathname.startsWith('/app/');
 
-  // Demo mode: no Supabase, so no session to refresh and no gate to apply.
-  // Security headers still go on every response.
+  // Demo mode: no auth at all, and /login is meaningless.
   if (demoMode()) {
     if (pathname === '/login') {
       const url = request.nextUrl.clone();
@@ -133,95 +128,51 @@ export async function middleware(request: NextRequest) {
       url.search = '';
       return applySecurityHeaders(NextResponse.redirect(url));
     }
-    return applySecurityHeaders(NextResponse.next({ request }));
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Cron routes are called by Vercel's scheduler, not a browser: no Origin
   // header and no session. They authenticate with a bearer secret instead.
   const isCron = pathname.startsWith('/api/cron/');
 
-  // CSRF backstop for state-changing API calls.
-  if (!isCron && pathname.startsWith('/api/') && MUTATING.has(request.method) && !isSameOrigin(request)) {
+  // CSRF backstop. SameSite=Lax still permits top-level POST navigations, so
+  // an Origin check is the thing that actually stops a cross-site form post.
+  if (
+    !isCron &&
+    pathname.startsWith('/api/') &&
+    MUTATING.has(request.method) &&
+    !isSameOrigin(request)
+  ) {
     return applySecurityHeaders(
       NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 }),
     );
   }
 
-  const isProtectedPath = pathname === '/app' || pathname.startsWith('/app/');
-
-  const config = supabaseConfig();
-
-  // Not connected to a database yet: public pages work, the app sends you to
-  // the login screen, which explains what is still missing.
-  if (!config) {
-    if (isProtectedPath) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/login';
-      url.search = '?setup=1';
-      return applySecurityHeaders(NextResponse.redirect(url));
-    }
-    return applySecurityHeaders(NextResponse.next({ request }));
-  }
-
-  let response = NextResponse.next({ request });
-
-  // Refresh the Supabase session and propagate any rotated cookies.
-  //
-  // Everything from here is wrapped: middleware runs on EVERY request, so an
-  // exception here takes down the marketing site, the privacy policy and the
-  // login page along with the app. Auth failing should log the visitor out,
-  // not black out the site.
-  let user = null;
-  try {
-    const supabase = createServerClient(
-      config.url,
-      config.key,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: (cookies: CookieToSet[]) => {
-            cookies.forEach(({ name, value }: CookieToSet) => request.cookies.set(name, value));
-            response = NextResponse.next({ request });
-            cookies.forEach(({ name, value, options }: CookieToSet) =>
-              response.cookies.set(name, value, {
-                ...options,
-                httpOnly: true,
-                sameSite: 'lax',
-                secure: process.env.NODE_ENV === 'production',
-                path: '/',
-              }),
-            );
-          },
-        },
-      },
+  // API routes answer with their own JSON 401; redirecting a fetch to an HTML
+  // login page would just confuse the caller.
+  if (isProtected) {
+    const configured = Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim(),
     );
 
-    const result = await supabase.auth.getUser();
-    user = result.data.user;
-  } catch (error) {
-    // Supabase unreachable, key rejected, or the SDK threw. Treat as signed
-    // out: public pages still render, protected pages redirect to login.
-    console.error('[middleware] auth check failed:', (error as Error).message);
+    if (!configured || !hasSessionCookie(request)) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.search = configured ? `?next=${encodeURIComponent(pathname)}` : '?setup=1';
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
   }
 
-  // Only the signed-in app is gated. The marketing site, legal pages and
-  // login must stay public — Google's OAuth review has to reach them, and
-  // they need to be indexable. API routes answer with JSON 401 themselves,
-  // so they are excluded to avoid returning an HTML redirect to a fetch.
-  if (!user && isProtectedPath) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    url.search = `?next=${encodeURIComponent(pathname)}`;
-    return applySecurityHeaders(NextResponse.redirect(url));
-  }
-  if (user && pathname === '/login') {
+  // Already signed in and asking for the login page: send them to the app.
+  if (pathname === '/login' && hasSessionCookie(request)) {
     const url = request.nextUrl.clone();
     url.pathname = '/app';
     url.search = '';
     return applySecurityHeaders(NextResponse.redirect(url));
   }
 
-  return applySecurityHeaders(response);
+  return applySecurityHeaders(NextResponse.next());
 }
 
 export const config = {
