@@ -1,9 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "regions": ["iad1"],
+  "regions": [
+    "sin1"
+  ],
   "crons": [
-    { "path": "/api/cron/sync", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/digest", "schedule": "30 6 * * *" }
+    {
+      "path": "/api/cron/sync",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/digest",
+      "schedule": "30 6 * * *"
+    }
   ]
 }
