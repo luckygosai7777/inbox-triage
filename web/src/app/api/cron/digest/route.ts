@@ -21,6 +21,7 @@ import {
 import { cronForbidden } from '@/lib/cron';
 import { emailConfigured, sendEmail } from '@/lib/email';
 import { adminClient } from '@/lib/supabase';
+import { appUrl } from '@/lib/url';
 
 const BATCH = 50;
 
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const appUrl = process.env.APP_URL ?? '';
+  const base = appUrl();
 
   const { data: profiles, error } = await db
     .from('profiles')
@@ -95,8 +96,8 @@ export async function GET(request: NextRequest) {
       const result = await sendEmail({
         to: profile.email,
         subject: digest.subject,
-        html: renderDigestHtml(digest, appUrl, now),
-        text: renderDigestText(digest, appUrl, now),
+        html: renderDigestHtml(digest, base, now),
+        text: renderDigestText(digest, base, now),
       });
       if (result.sent) sent += 1;
       else failed += 1;

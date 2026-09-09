@@ -1,7 +1,9 @@
 import type { MetadataRoute } from 'next';
 
+import { appUrl } from '@/lib/url';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.APP_URL ?? 'http://localhost:3000';
+  const base = appUrl();
   const now = new Date();
   return [
     { url: `${base}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },

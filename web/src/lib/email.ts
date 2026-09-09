@@ -8,6 +8,8 @@
  */
 import 'server-only';
 
+import { appUrl } from './url';
+
 type SendResult = { sent: boolean; skipped?: string; id?: string };
 
 export function emailConfigured(): boolean {
@@ -40,7 +42,7 @@ export async function sendEmail(options: {
         // One-click unsubscribe. Required by Gmail and Yahoo for bulk senders,
         // and the reason digests land in the inbox rather than Promotions.
         headers: {
-          'List-Unsubscribe': `<${process.env.APP_URL ?? ''}/app/settings>`,
+          'List-Unsubscribe': `<${appUrl()}/app/settings>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
       }),
