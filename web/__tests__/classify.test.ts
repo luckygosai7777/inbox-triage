@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { heuristicClassify, type ClassifyInput } from '@/lib/llm';
+import { clampCategory, heuristicClassify, type ClassifyInput } from '@/lib/llm';
 import { senderKind } from '@/lib/parsing';
 
 function classify(overrides: Partial<ClassifyInput>) {
@@ -144,5 +144,40 @@ describe('heuristicClassify', () => {
       senderKind: 'automated',
     });
     expect(row.dueAt).toBeNull();
+  });
+});
+
+describe('clampCategory — the repair pass over rows classified by older rules', () => {
+  it('moves an automated sender out of Clients', () => {
+    expect(
+      clampCategory('Clients', 'automated', { text: 'Security alert', hasCorresponded: true }),
+    ).toBe('Notifications');
+  });
+
+  it('sends an automated receipt to Receipts, not Notifications', () => {
+    expect(
+      clampCategory('Clients', 'automated', { text: 'Your invoice #4821 payment' }),
+    ).toBe('Receipts');
+  });
+
+  it('moves list mail to Newsletters', () => {
+    expect(clampCategory('Personal', 'list', { text: 'Issue 42' })).toBe('Newsletters');
+  });
+
+  it('leaves a genuine client alone', () => {
+    expect(
+      clampCategory('Clients', 'person', { text: 'Re: contract', hasCorresponded: true }),
+    ).toBe('Clients');
+  });
+
+  it('demotes a client the user has never written to', () => {
+    expect(
+      clampCategory('Clients', 'person', { text: 'Re: contract', hasCorresponded: false }),
+    ).toBe('Other');
+  });
+
+  it('rejects a category that is not one of ours', () => {
+    expect(clampCategory('Urgent!!!', 'person', { text: 'hi' })).toBe('Other');
+    expect(clampCategory(null, 'person', { text: 'hi' })).toBe('Other');
   });
 });

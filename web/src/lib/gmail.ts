@@ -15,7 +15,13 @@ import { google } from 'googleapis';
 import { adminClient } from './supabase';
 import { decryptSecret } from './crypto';
 import { env } from './env';
-import { classifyMessages, extractCommitments, parseBrief, type ClassifyInput } from './llm';
+import {
+  classifyMessages,
+  clampCategory,
+  extractCommitments,
+  parseBrief,
+  type ClassifyInput,
+} from './llm';
 import { looksResolved } from './commitments';
 import * as parsing from './parsing';
 
@@ -209,7 +215,7 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
   // --- messages -----------------------------------------------------------
   const { data: existing } = await db
     .from('messages')
-    .select('gmail_message_id, classified_at')
+    .select('gmail_message_id, classified_at, category, needs_reply')
     .eq('user_id', userId)
     .in('gmail_message_id', parsed.map((m) => m.gmailMessageId));
 
@@ -217,6 +223,9 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
     (existing ?? []).filter((r: any) => r.classified_at).map((r: any) => r.gmail_message_id),
   );
   const knownIds = new Set((existing ?? []).map((r: any) => r.gmail_message_id));
+  const storedById = new Map(
+    (existing ?? []).map((r: any) => [r.gmail_message_id as string, r]),
+  );
 
   const messageRows = parsed.map((m) => ({
     user_id: userId,
@@ -291,6 +300,42 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
         .eq('gmail_message_id', message.gmailMessageId);
       result.classified += 1;
     }
+  }
+
+  // --- repair (free, no model call) ----------------------------------------
+  //
+  // Rows classified before the sender rules existed keep whatever they were
+  // given, because sync never re-classifies. That left real mailboxes with a
+  // Google security alert filed under Clients and no way to shift it. The
+  // header facts are in hand for every message we just fetched, so any stored
+  // category that contradicts them is corrected here — no tokens, no waiting.
+  const toRepair = parsed.filter(
+    (m) => !m.isOutbound && alreadyClassified.has(m.gmailMessageId),
+  );
+
+  for (const message of toRepair) {
+    const stored = storedById.get(message.gmailMessageId);
+    if (!stored) continue;
+
+    const category = clampCategory(stored.category, message.senderKind, {
+      text: message.subject + message.preview,
+      hasCorresponded: correspondents.has(message.fromEmail.toLowerCase()),
+    });
+    // Only a person can owe you a reply.
+    const needsReply = message.senderKind === 'person' && Boolean(stored.needs_reply);
+
+    if (category === stored.category && needsReply === Boolean(stored.needs_reply)) continue;
+
+    await db
+      .from('messages')
+      .update({
+        category,
+        needs_reply: needsReply,
+        ...(needsReply ? {} : { due_at: null, priority: 2 }),
+      })
+      .eq('user_id', userId)
+      .eq('gmail_message_id', message.gmailMessageId);
+    result.classified += 1;
   }
 
   await syncSubscriptions(userId, parsed);

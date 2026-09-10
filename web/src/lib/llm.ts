@@ -250,6 +250,38 @@ const URGENT_WORDS =
 const SOCIAL_DOMAINS = ['notion.so', 'github.com', 'slack.com', 'linkedin.com'];
 
 /** Deterministic fallback. Never calls out, always returns a full result. */
+/**
+ * Force a category to agree with what the headers say about the sender.
+ *
+ * Used on the model's answer and on rows classified before these rules existed,
+ * so a mislabelled message repairs itself on the next sync without spending a
+ * token. A person-category has to be earned; it is never where things land by
+ * default.
+ */
+export function clampCategory(
+  proposed: unknown,
+  kind: SenderKind,
+  context: { text: string; hasCorresponded?: boolean },
+): string {
+  const HUMAN_ONLY = ['Clients', 'Collabs', 'Personal'];
+  let category = CATEGORIES.includes(String(proposed) as any) ? String(proposed) : 'Other';
+
+  if (kind !== 'person' && HUMAN_ONLY.includes(category)) {
+    // A machine did not become a client by writing persuasively. This is a
+    // quality rule and a prompt-injection defence at the same time.
+    category = RECEIPT_WORDS.test(context.text)
+      ? 'Receipts'
+      : kind === 'list'
+        ? 'Newsletters'
+        : 'Notifications';
+  }
+  if (category === 'Clients' && !context.hasCorresponded) {
+    // Never written to them; "client" would be a guess.
+    category = kind === 'person' ? 'Other' : 'Notifications';
+  }
+  return category;
+}
+
 export function heuristicClassify(input: ClassifyInput): Classification {
   const haystack = `${input.subject} ${input.preview} ${(input.body ?? '').slice(0, 1200)}`;
   const domain = input.fromEmail.split('@').pop() ?? '';
@@ -348,21 +380,10 @@ export async function classifyMessages(
       // convincingly it is written — that is both a quality rule and a small
       // prompt-injection defence.
       const kind = message.senderKind ?? (message.isListMail ? 'list' : 'person');
-      const HUMAN_ONLY = ['Clients', 'Collabs', 'Personal'];
-
-      let category = CATEGORIES.includes(row.category) ? row.category : 'Other';
-      if (kind !== 'person' && HUMAN_ONLY.includes(category)) {
-        category = RECEIPT_WORDS.test(message.subject + message.preview)
-          ? 'Receipts'
-          : kind === 'list'
-            ? 'Newsletters'
-            : 'Notifications';
-      }
-      if (category === 'Clients' && kind === 'person' && !message.hasCorresponded) {
-        // Never met them; "client" would be a guess.
-        category = 'Other';
-      }
-
+      const category = clampCategory(row.category, kind, {
+        text: message.subject + message.preview,
+        hasCorresponded: message.hasCorresponded,
+      });
       const needsReply = kind === 'person' && Boolean(row.needs_reply);
 
       out.set(message.id, {
