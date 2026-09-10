@@ -7,9 +7,9 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 import { createBrowserClient } from '@supabase/ssr';
 
 const NAV = [
-  { href: '/app', label: 'Inbox', icon: <span style={{ width: 16, height: 12, border: '1.5px solid currentColor', borderRadius: 2 }} /> },
-  { href: '/app/ledger', label: 'What you owe', icon: <span style={{ width: 14, height: 14, border: '1.5px solid currentColor', borderRadius: 3, borderLeftWidth: 4 }} /> },
-  { href: '/app/schedule', label: 'Schedule', icon: <span style={{ width: 14, height: 14, border: '1.5px solid currentColor', borderRadius: '50%' }} /> },
+  { href: '/app', label: 'Inbox', short: 'Inbox', icon: <span style={{ width: 16, height: 12, border: '1.5px solid currentColor', borderRadius: 2 }} /> },
+  { href: '/app/ledger', label: 'What you owe', short: 'Owed', icon: <span style={{ width: 14, height: 14, border: '1.5px solid currentColor', borderRadius: 3, borderLeftWidth: 4 }} /> },
+  { href: '/app/schedule', label: 'Schedule', short: 'Schedule', icon: <span style={{ width: 14, height: 14, border: '1.5px solid currentColor', borderRadius: '50%' }} /> },
 ];
 
 type ToastContext = { say: (message: string) => void };
@@ -65,6 +65,9 @@ export default function Shell({
               aria-label={item.label}
             >
               {item.icon}
+              {/* Only rendered on phones, where the rail becomes a labelled
+                  tab bar. An abstract icon with no hover tooltip is a guess. */}
+              <span className="nav-label">{item.short}</span>
             </Link>
           ))}
 
@@ -82,7 +85,14 @@ export default function Shell({
               {(email || 'me').slice(0, 2).toUpperCase()}
             </button>
             {menuOpen && (
-              <div className="menu" role="menu">
+              <>
+                <button
+                  type="button"
+                  className="menu-scrim"
+                  aria-label="Close menu"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="menu" role="menu">
                 <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-medium)' }}>
                   <div className="mono tiny muted" style={{ wordBreak: 'break-all' }}>
                     {email}
@@ -103,7 +113,8 @@ export default function Shell({
                 >
                   Sign out
                 </button>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </nav>

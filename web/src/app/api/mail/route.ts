@@ -9,9 +9,15 @@ import { z } from 'zod';
 
 import { route, HttpError } from '@/lib/api';
 import { DEMO_VIPS, demoMail, isDemo } from '@/lib/demo';
+import { CATEGORIES } from '@/lib/llm';
 import { search, type Searchable } from '@/lib/search';
 
-const FILTERS = ['All', 'Needs reply', 'Clients', 'Newsletters', 'Receipts'] as const;
+/**
+ * Every category is a valid filter. The client hides chips whose count is zero,
+ * so a mailbox with no Collabs never shows an empty Collabs chip — the list
+ * shapes itself to the mailbox rather than to our taxonomy.
+ */
+const FILTERS = ['All', 'Needs reply', ...CATEGORIES] as const;
 
 const schema = z.object({
   filter: z.enum(FILTERS).default('All'),
@@ -40,7 +46,7 @@ export const GET = route<z.infer<typeof schema>>(
           score: hit.score,
         })),
         count: hits.length,
-        filters: ['All', 'Needs reply', 'Clients', 'Newsletters', 'Receipts'].map((label) => ({
+        filters: FILTERS.map((label) => ({
           label,
           count:
             label === 'All'

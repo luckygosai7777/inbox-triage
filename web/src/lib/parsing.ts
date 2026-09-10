@@ -255,3 +255,61 @@ export function looksLikeListMail(headers: Headers): boolean {
   if (markers.some((m) => m in headers)) return true;
   return ['bulk', 'list', 'junk'].includes((headers.precedence ?? '').toLowerCase());
 }
+
+// ------------------------------------------------------------ sender kind
+
+/**
+ * Who sent this: a machine, a mailing list, or a person?
+ *
+ * This exists because the first classifier treated "Clients" as the catch-all
+ * category — anything that was not a newsletter, receipt or social notification
+ * fell into it. A Google security alert became a client. That is worse than
+ * useless: it puts machine noise in the one category that is supposed to mean
+ * "a human I do business with".
+ *
+ * Detection is header-first because headers are what senders actually use to
+ * declare themselves, and they are far harder to get wrong than reading prose.
+ */
+export type SenderKind = 'automated' | 'list' | 'person';
+
+/**
+ * Local parts that only ever belong to a machine. Deliberately excludes
+ * support@, info@, hello@, contact@ and sales@ — those are usually staffed by
+ * a person who does expect a reply.
+ */
+const AUTOMATED_LOCAL =
+  /^(no[-_.]?reply|do[-_.]?not[-_.]?reply|donotreply|notifications?|notify|alerts?|automated|auto[-_.]?(reply|mailer|confirm)|mailer([-_.]?daemon)?|bounce[sd]?|postmaster|system|robot|bot|noc|cron|daemon|nepasrepondre)([-_.+].*)?$/i;
+
+/** Phrases that appear in the body of machine-sent mail. */
+const AUTOMATED_BODY =
+  /\b(do not reply to this (e-?mail|message)|this is an automated|automatically generated|please do not respond to this)\b/i;
+
+export function senderKind(
+  headers: Headers,
+  fromEmail: string,
+  body = '',
+): SenderKind {
+  // 1. RFC 3834: the sender explicitly declared itself automatic.
+  const autoSubmitted = (headers['auto-submitted'] ?? '').toLowerCase();
+  if (autoSubmitted && autoSubmitted !== 'no') return 'automated';
+
+  // 2. Headers only bulk tooling sets.
+  if ('x-auto-response-suppress' in headers) return 'automated';
+  if ('feedback-id' in headers) return 'automated';
+  if (['auto_reply', 'auto-reply'].includes((headers.precedence ?? '').toLowerCase())) {
+    return 'automated';
+  }
+
+  // 3. The address itself.
+  const local = (fromEmail.split('@')[0] ?? '').trim();
+  if (AUTOMATED_LOCAL.test(local)) return 'automated';
+
+  // 4. A list is a machine too, but a distinguishable one — a newsletter is
+  //    worth separating from a password-reset notice.
+  if (looksLikeListMail(headers)) return 'list';
+
+  // 5. Last resort: the body says so.
+  if (AUTOMATED_BODY.test(body.slice(0, 2000))) return 'automated';
+
+  return 'person';
+}

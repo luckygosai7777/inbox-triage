@@ -122,6 +122,7 @@ export type ParsedMessage = {
   hasAttachment: boolean;
   body: string;
   isListMail: boolean;
+  senderKind: parsing.SenderKind;
   listUnsubscribe: string;
 };
 
@@ -147,6 +148,7 @@ export function parseMessage(raw: any, isOutbound: boolean): ParsedMessage {
     hasAttachment: parsing.hasAttachment(payload),
     body,
     isListMail: parsing.looksLikeListMail(headers),
+    senderKind: parsing.senderKind(headers, from.email, body),
     listUnsubscribe: (headers['list-unsubscribe'] ?? '').slice(0, 1000),
   };
 }
@@ -250,6 +252,11 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
     (m) => !m.isOutbound && !alreadyClassified.has(m.gmailMessageId),
   );
 
+  // Everyone this mailbox has ever written to. The single best signal for
+  // "is this a real relationship or a stranger", and it is free — we sync sent
+  // mail for the ledger anyway.
+  const correspondents = await knownCorrespondents(userId, parsed);
+
   if (toClassify.length) {
     const inputs: ClassifyInput[] = toClassify.map((m) => ({
       id: m.gmailMessageId,
@@ -259,6 +266,8 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
       preview: m.preview,
       body: m.body,
       isListMail: m.isListMail,
+      senderKind: m.senderKind,
+      hasCorresponded: correspondents.has(m.fromEmail.toLowerCase()),
     }));
 
     const classifications = await classifyMessages(inputs);
@@ -290,6 +299,40 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
 
   await db.from('profiles').update({ last_synced_at: new Date().toISOString() }).eq('id', userId);
   return result;
+}
+
+/**
+ * Addresses the mailbox owner has sent mail to — from this sync and from
+ * everything already stored.
+ */
+async function knownCorrespondents(
+  userId: string,
+  parsed: ParsedMessage[],
+): Promise<Set<string>> {
+  const known = new Set<string>();
+
+  for (const message of parsed) {
+    if (!message.isOutbound) continue;
+    for (const address of message.toEmails) known.add(address.toLowerCase());
+  }
+
+  try {
+    const db = adminClient();
+    const { data } = await db
+      .from('messages')
+      .select('to_emails')
+      .eq('user_id', userId)
+      .eq('is_outbound', true)
+      .limit(2000);
+    for (const row of (data ?? []) as any[]) {
+      for (const address of row.to_emails ?? []) known.add(String(address).toLowerCase());
+    }
+  } catch (error) {
+    // Worst case the classifier is more cautious and files someone as Other.
+    console.warn('[sync] correspondent lookup failed:', (error as Error).message);
+  }
+
+  return known;
 }
 
 // -------------------------------------------------------------- commitments

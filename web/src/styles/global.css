@@ -66,6 +66,9 @@ body,
 }
 
 body {
+  /* One wide table should scroll inside its own box; it must never make the
+     whole page slide sideways, which on a phone hides the navigation. */
+  overflow-x: hidden;
   color: var(--text-body);
   font-family: var(--font-body);
   font-size: 13px;
@@ -262,6 +265,19 @@ button:disabled {
   background: var(--bg-tertiary);
   border-color: var(--border-medium);
   color: var(--accent);
+}
+/* Hidden until the rail becomes a bottom tab bar. */
+.nav-label {
+  display: none;
+}
+/* Catches the tap that should close the account menu. */
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 .nav-avatar {
   width: 28px;
@@ -583,12 +599,74 @@ button:disabled {
 
 /* ------------------------------------------------------------- mail list */
 
+/*
+ * Mobile-first, and deliberately so: the narrow layout is what a phone gets
+ * with no media query at all, so a viewport we did not anticipate degrades to
+ * the readable list rather than to a six-column grid squeezed into 360px.
+ *
+ * Phone      dot · sender+subject+preview · time
+ * >= 620px   + a priority word and its own sender column
+ * >= 900px   + the category tag
+ */
 .mail-head,
 .mail-row {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 14px minmax(0, 1fr) 44px;
+  gap: 10px;
   align-items: center;
-  padding: 10px 16px;
+  padding: 10px 14px;
+}
+.mail-c-gutter,
+.mail-c-sender,
+.mail-c-priolabel,
+.mail-c-cat {
+  display: none;
+}
+.mail-c-prio {
+  display: flex;
+  align-items: center;
+}
+.mail-c-time {
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (min-width: 620px) {
+  .mail-head,
+  .mail-row {
+    grid-template-columns:
+      20px minmax(56px, 72px) minmax(80px, 1fr)
+      minmax(130px, 2.4fr) minmax(36px, 48px);
+    gap: 12px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .mail-c-gutter {
+    display: block;
+  }
+  .mail-c-sender {
+    display: flex;
+    align-items: center;
+  }
+  .mail-c-priolabel {
+    display: inline;
+  }
+  /* The sender has its own column now; repeating it above the subject is noise. */
+  .mail-c-stacked {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .mail-head,
+  .mail-row {
+    grid-template-columns:
+      20px minmax(56px, 76px) minmax(80px, 1fr)
+      minmax(120px, 2.6fr) minmax(0, 0.9fr) minmax(36px, 48px);
+  }
+  .mail-c-cat {
+    display: block;
+  }
 }
 .mail-head {
   border-bottom: 1px solid var(--border-light);
@@ -861,25 +939,125 @@ button:disabled {
 }
 
 @media (max-width: 619px) {
+  /*
+   * The icon rail becomes a bottom tab bar.
+   *
+   * A 56px vertical strip costs 15% of a 375px screen for three unlabelled
+   * icons, and on a phone there is no hover, so `title` never shows and the
+   * icons stay unexplained. At the bottom the same three targets are within
+   * thumb reach, carry their labels, and give the content its full width.
+   */
   .shell {
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    /* viewport-fit: cover lets content reach under a notch in landscape. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   .nav-rail {
-    padding: 12px 0;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 30;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    gap: 0;
+    padding: 6px 8px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--border-light);
   }
+  /* The wordmark is already in the page; the bar is for navigation. */
+  .nav-logo,
+  .nav-rail .spacer {
+    display: none;
+  }
+  .nav-item {
+    width: auto;
+    flex: 1 1 0;
+    height: 46px;
+    gap: 3px;
+    grid-auto-flow: row;
+    align-content: center;
+    border-radius: 12px;
+  }
+  .nav-item[aria-current='true'] {
+    border-color: transparent;
+  }
+  .nav-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .nav-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 12px;
+  }
+  /* Clear the fixed bar so the last row of any list stays reachable. */
+  .shell-main {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+  /* Anchored to the rail, which is now at the bottom of the screen. */
+  .menu {
+    left: auto;
+    right: 8px;
+    bottom: calc(100% + 10px);
+    width: min(260px, calc(100vw - 24px));
+  }
+  .toast {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    transform: none;
+    text-align: center;
+  }
+
   .shell-pad,
   .page-header,
   .metrics,
   .section {
-    padding-left: 16px;
-    padding-right: 16px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .page-header {
+    padding-top: 18px;
+    gap: 12px;
+  }
+  .section {
+    padding-top: 18px;
+    padding-bottom: 24px;
+    gap: 16px;
   }
   .step-label {
     display: none;
   }
-  .mail-head,
-  .mail-row {
-    gap: 8px;
+  /*
+   * iOS zooms the whole page when a focused input is under 16px, and never
+   * zooms back out. Every text field pays 16px on phones for that reason.
+   */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .search-shell {
+    height: 44px;
+  }
+  /* Comfortable thumb targets; 44px is the platform minimum. */
+  .btn,
+  .chip {
+    min-height: 40px;
+  }
+  .btn-sm,
+  .btn-xs,
+  .chip-sm {
+    min-height: 34px;
+  }
+  /* Full-width action buttons read as a stack rather than a ragged row. */
+  .page-header .btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 
@@ -887,8 +1065,14 @@ button:disabled {
   .h1 {
     font-size: 20px;
   }
+  .h2 {
+    font-size: 16px;
+  }
   .section {
-    gap: 16px;
+    gap: 14px;
+  }
+  .card-pad {
+    padding: 14px;
   }
 }
 

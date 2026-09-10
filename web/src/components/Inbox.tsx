@@ -26,26 +26,16 @@ const PRIORITY = [
   { label: 'Later', color: 'var(--text-tertiary)' },
 ];
 
-const GRID = {
-  xxs: '20px 14px minmax(110px, 1fr) minmax(32px, 40px)',
-  xs: '20px 14px minmax(64px, 1fr) minmax(120px, 2fr) minmax(32px, 40px)',
-  sm: '20px minmax(56px, 72px) minmax(80px, 1fr) minmax(130px, 2.4fr) minmax(36px, 48px)',
-  lg: '20px minmax(56px, 76px) minmax(80px, 1fr) minmax(120px, 2.6fr) minmax(0, 0.9fr) minmax(36px, 48px)',
-};
-
-function useTier() {
-  const [width, setWidth] = useState(1440);
-  useEffect(() => {
-    const onResize = () => setWidth(window.innerWidth);
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-  if (width < 440) return 'xxs' as const;
-  if (width < 620) return 'xs' as const;
-  if (width < 900) return 'sm' as const;
-  return 'lg' as const;
-}
+/*
+ * Which columns appear at which width is decided in CSS (see `.mail-row` and
+ * its media queries), not here.
+ *
+ * This used to be a `useTier()` hook reading window.innerWidth. On the server
+ * there is no window, so it guessed 1440 — every phone rendered the six-column
+ * desktop grid, painted it, and only then snapped to the narrow one. That
+ * flash was the "looks off on my phone" report. CSS knows the viewport before
+ * the first paint; JavaScript cannot.
+ */
 
 function timeLabel(iso: string): string {
   const date = new Date(iso);
@@ -71,7 +61,6 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 export default function Inbox() {
   const { say } = useToast();
-  const tier = useTier();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
   const [data, setData] = useState<{ results: Row[]; count: number; filters: any[] }>({
@@ -148,11 +137,6 @@ export default function Inbox() {
       setSyncing(false);
     }
   };
-
-  const columns = GRID[tier];
-  const showCategory = tier === 'lg';
-  const showSender = tier !== 'xxs';
-  const showPriorityLabel = tier === 'sm' || tier === 'lg';
 
   const needsReply = useMemo(
     () => data.filters.find((f) => f.label === 'Needs reply')?.count ?? 0,
@@ -252,18 +236,29 @@ export default function Inbox() {
             className="row wrap gap-8"
             style={{ padding: '12px 16px 16px', borderBottom: '1px solid var(--border-light)' }}
           >
-            {data.filters.map((item: any) => (
-              <button
-                key={item.label}
-                type="button"
-                className="chip"
-                aria-pressed={filter === item.label}
-                onClick={() => setFilter(item.label)}
-              >
-                {item.label}
-                <span className="chip-count">{item.count}</span>
-              </button>
-            ))}
+            {data.filters
+              // An empty chip is a dead end: it says a category exists, then
+              // shows nothing. Keep All and Needs reply always, and keep
+              // whatever is selected so the chip you clicked cannot vanish.
+              .filter(
+                (item: any) =>
+                  item.count > 0 ||
+                  item.label === 'All' ||
+                  item.label === 'Needs reply' ||
+                  item.label === filter,
+              )
+              .map((item: any) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="chip"
+                  aria-pressed={filter === item.label}
+                  onClick={() => setFilter(item.label)}
+                >
+                  {item.label}
+                  <span className="chip-count">{item.count}</span>
+                </button>
+              ))}
             <div className="spacer" />
             <div className="mono muted">{data.count} shown</div>
           </div>
@@ -296,25 +291,20 @@ export default function Inbox() {
 
           {!loading && !error && data.results.length > 0 && (
             <div role="table" aria-label="Messages">
-              <div className="mail-head label" style={{ gridTemplateColumns: columns }} role="row">
-                <span />
-                {showPriorityLabel ? <div>Priority</div> : <div><span className="sr-only">Priority</span></div>}
-                {showSender && <div>From</div>}
-                <div>Subject</div>
-                {showCategory && <div>Category</div>}
-                <div style={{ textAlign: 'right' }}>Time</div>
+              <div className="mail-head label" role="row">
+                <span className="mail-c-gutter" />
+                <div className="mail-c-prio">
+                  <span className="mail-c-priolabel">Priority</span>
+                  <span className="sr-only">Priority</span>
+                </div>
+                <div className="mail-c-sender">From</div>
+                <div className="mail-c-subject">Subject</div>
+                <div className="mail-c-cat">Category</div>
+                <div className="mail-c-time">Time</div>
               </div>
 
               {data.results.map((row) => (
-                <MailRow
-                  key={row.id}
-                  row={row}
-                  columns={columns}
-                  showSender={showSender}
-                  showCategory={showCategory}
-                  showPriorityLabel={showPriorityLabel}
-                  stackSender={tier === 'xxs'}
-                />
+                <MailRow key={row.id} row={row} />
               ))}
             </div>
           )}
@@ -328,61 +318,43 @@ export default function Inbox() {
  * Memoised: the list re-renders on every keystroke while searching, and rows
  * that did not change should not re-render with it.
  */
-const MailRow = memo(function MailRow({
-  row,
-  columns,
-  showSender,
-  showCategory,
-  showPriorityLabel,
-  stackSender,
-}: {
-  row: Row;
-  columns: string;
-  showSender: boolean;
-  showCategory: boolean;
-  showPriorityLabel: boolean;
-  stackSender: boolean;
-}) {
+const MailRow = memo(function MailRow({ row }: { row: Row }) {
   const priority = PRIORITY[row.priority] ?? PRIORITY[2];
   return (
     <Link
       href={`/app/thread/${row.threadId}`}
       className="mail-row"
-      style={{ gridTemplateColumns: columns, textDecoration: 'none', color: 'inherit' }}
+      style={{ textDecoration: 'none', color: 'inherit' }}
       role="row"
     >
-      <span />
-      <div className="row gap-6">
+      <span className="mail-c-gutter" />
+      <div className="mail-c-prio gap-6">
         <span className="prio-dot" style={{ background: priority.color }} />
-        {showPriorityLabel && (
-          <span className="small" style={{ fontWeight: 600, color: priority.color }}>
-            {priority.label}
-          </span>
-        )}
+        <span className="mail-c-priolabel small" style={{ fontWeight: 600, color: priority.color }}>
+          {priority.label}
+        </span>
       </div>
 
-      {showSender && (
-        <div className="row gap-6" style={{ minWidth: 0 }}>
-          {row.isVip && (
-            <span className="tiny" style={{ flex: 'none', color: 'var(--accent)' }} title="Important person">
-              ★
-            </span>
-          )}
-          <span
-            className="truncate small"
-            style={{ fontWeight: 500, color: row.isVip ? 'var(--text-primary)' : 'var(--text-body)' }}
-          >
-            {row.fromName || row.fromEmail}
+      <div className="mail-c-sender gap-6" style={{ minWidth: 0 }}>
+        {row.isVip && (
+          <span className="tiny" style={{ flex: 'none', color: 'var(--accent)' }} title="Important person">
+            ★
           </span>
-        </div>
-      )}
-
-      <div style={{ minWidth: 0 }}>
-        {stackSender && (
-          <div className="truncate small" style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
-            {row.fromName || row.fromEmail}
-          </div>
         )}
+        <span
+          className="truncate small"
+          style={{ fontWeight: 500, color: row.isVip ? 'var(--text-primary)' : 'var(--text-body)' }}
+        >
+          {row.fromName || row.fromEmail}
+        </span>
+      </div>
+
+      <div className="mail-c-subject" style={{ minWidth: 0 }}>
+        {/* Shown only where the sender column is hidden — see global.css. */}
+        <div className="mail-c-stacked truncate small" style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+          {row.isVip ? '★ ' : ''}
+          {row.fromName || row.fromEmail}
+        </div>
         <div className="truncate small" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
           {row.subject || '(no subject)'}
         </div>
@@ -398,13 +370,11 @@ const MailRow = memo(function MailRow({
         )}
       </div>
 
-      {showCategory && (
-        <div style={{ minWidth: 0 }}>{row.category && <span className="tag">{row.category}</span>}</div>
-      )}
-
-      <div className="mono muted" style={{ textAlign: 'right' }}>
-        {timeLabel(row.sentAt)}
+      <div className="mail-c-cat" style={{ minWidth: 0 }}>
+        {row.category && <span className="tag">{row.category}</span>}
       </div>
+
+      <div className="mail-c-time mono muted">{timeLabel(row.sentAt)}</div>
     </Link>
   );
 });
