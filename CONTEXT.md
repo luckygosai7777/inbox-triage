@@ -1,7 +1,7 @@
 # Owed — project context
 
 Paste this into any AI assistant to bring it up to speed on the project.
-Last updated: 2026-09-10
+Last updated: 2026-09-10 (deployed and syncing real mail)
 
 ---
 
@@ -194,36 +194,67 @@ Also budget ~5% for Razorpay on a ₹99 charge, and 18% GST if registered.
 
 ## Current status
 
-**Live:** https://inbox-triage-xi.vercel.app
-**Repo:** github.com/luckygosai7777/inbox-triage (branch `main`, auto-deploys)
+**Live:** https://inbox-triage-xi.vercel.app — deployed, signed in, syncing real Gmail.
+**Repo:** github.com/luckygosai7777/inbox-triage (`main`, auto-deploys to Vercel)
 
-### Working
-Landing page, pricing, privacy, terms, 404, robots, sitemap, all security
-controls, database schema with RLS, Vercel deployment.
+### Working end to end
+Landing page, pricing, privacy, terms, 404, robots, sitemap. Google OAuth sign-in.
+Gmail + Calendar sync. Inbox triage, ledger, schedule, thread reader, settings.
+All security controls. Database schema with RLS on 13 tables.
 
-### In progress
-Google OAuth setup in Google Cloud Console. Supabase's Google provider is not yet
-enabled, so sign-in returns `provider is not enabled`.
+### Configured
+| Variable | State |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | set |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | set |
+| `SUPABASE_SERVICE_ROLE_KEY` | set |
+| `TOKEN_ENCRYPTION_KEY` | set — **43 chars, do not "fix" it** (see below) |
+| `GOOGLE_CLIENT_ID` | set |
+| `GOOGLE_CLIENT_SECRET` | set |
+| `ANTHROPIC_API_KEY` | **not set** — sync falls back to regex heuristics |
+| `CRON_SECRET` | **not set** — background sync and digests do not run |
+| `APP_URL` | not set — falls back to VERCEL_PROJECT_PRODUCTION_URL, fine |
 
-### Not built
-- Billing (Razorpay) — pricing page sends everyone to the free plan
-- Bulk-send composer UI (logic in `composer.ts` is written and tested)
-- Subscription cleanup UI, VIP management UI
-- Onboarding for a first-run empty ledger
+### ⚠️ Do not regenerate TOKEN_ENCRYPTION_KEY
+It is 43 characters because a trailing `=` was lost in a paste. It still decodes
+to a valid 32-byte key and has already encrypted a live Google refresh token.
+Changing it makes that token permanently undecryptable and forces every user to
+reconnect Google.
 
-### Known blockers before public launch
-1. **Placeholders in legal pages** — 11 `TODO` / `example.com` markers in
-   `privacy/page.tsx` and `terms/page.tsx` need a real entity name, address,
-   contact email and jurisdiction.
-2. **`CRON_SECRET` not set in Vercel** — background sync and digests currently
-   return 503 and never run.
-3. **Google verification needs an owned domain.** `gmail.modify` is a restricted
-   scope requiring manual review, and Google requires domain ownership proof via
-   Search Console. A `*.vercel.app` subdomain cannot be verified — a real domain
-   (e.g. `owed.app`) is needed.
-4. **Legal review.** The terms and privacy policy are a solid draft, not advice.
+### Next steps, roughly in order
+1. **Add `ANTHROPIC_API_KEY`** (needs $5 prepaid credit at console.anthropic.com).
+   Without it, classification and commitment extraction use pattern matching.
+   For cheap testing, also set `ANTHROPIC_MODEL=claude-haiku-4-5` and
+   `ANTHROPIC_MODEL_FAST=claude-haiku-4-5` — roughly 5x cheaper.
+2. **Add `CRON_SECRET`** — generate with
+   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+   Until then `/api/cron/*` returns 503 and nothing runs on a schedule.
+3. **Judge the ledger quality** against a real mailbox. The extractor is
+   deliberately narrow; if it misses real promises, loosen `PROMISE_PATTERNS` in
+   `src/lib/commitments.ts`. If it produces noise, tighten `HEDGE_PATTERNS`.
+4. **Onboarding** for a first-run empty ledger.
+5. **Billing** (Razorpay) — the pricing page currently sends everyone to Free.
+6. **Bulk-send UI, subscription cleanup UI, VIP management UI** — logic exists
+   and is tested; screens are not built.
 
----
+### Blockers before public launch
+1. **11 placeholders** (`TODO`, `example.com`) in `privacy/page.tsx` and
+   `terms/page.tsx` — real entity name, address, contact email, jurisdiction.
+2. **A real domain.** Google verification for the restricted `gmail.modify`
+   scope requires proving domain ownership in Search Console, and a
+   `*.vercel.app` subdomain cannot be verified. Until then: 100 test users,
+   added manually in Google Cloud → Audience → Test users.
+3. **Legal review** of the terms and privacy policy.
+
+### Debugging tip learned the hard way
+`GET /api/health` (signed in) reports which env vars the *running build* can
+see, their length, whether a paste left stray whitespace, which commit is
+deployed, and whether the user's Google token is stored and encrypted. It never
+returns a value. Check it first when something looks misconfigured.
+
+Also: **a git push does not always trigger a Vercel build.** If the site does
+not change, check Deployments — if the top entry is not your commit, it never
+ran. An empty commit re-fires it.
 
 ## Conventions worth knowing
 
