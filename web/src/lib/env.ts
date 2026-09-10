@@ -26,7 +26,12 @@ const schema = z.object({
 
   // --- Claude -------------------------------------------------------------
   ANTHROPIC_API_KEY: z.string().default(''),
+  // Used where judgement matters: commitment extraction and VIP briefs.
   ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
+  // Used for inbox classification, which is high-volume and low-ambiguity.
+  // Defaults to the same model; set it to a cheaper one to cut the per-user
+  // cost of a sync roughly fivefold. See README -> Unit economics.
+  ANTHROPIC_MODEL_FAST: z.string().default(''),
   LLM_ENABLED: z
     .string()
     .default('true')

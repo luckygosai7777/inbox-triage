@@ -136,6 +136,39 @@ Expect the review to take a few weeks. Until it passes, the app works for up to
 **Have a lawyer read the legal pages before you take money.** They are a solid
 draft, not advice.
 
+## Unit economics — read before changing a price
+
+The dominant cost per user is Anthropic tokens, not hosting. A sync makes three
+kinds of call: classification (batched, 10 messages each), commitment extraction
+(one per message mined), and VIP briefs.
+
+Rough steady-state cost for one active user, ~30 new messages a day, syncing
+daily:
+
+| Route | Calls/day | Model | Cost/month |
+|---|---|---|---|
+| Classification | ~3 batches | `ANTHROPIC_MODEL_FAST` | ~$2.00 on Opus, ~$0.40 on Haiku |
+| Commitment extraction | ~8 | `ANTHROPIC_MODEL` | ~$2.40 |
+| VIP briefs | ~3 | `ANTHROPIC_MODEL` | ~$0.90 |
+| **Total** | | | **~$5.30 on Opus throughout** |
+
+**₹99 is about $1.20.** On Opus everywhere, one Pro user costs roughly 4× what
+they pay. The plan limits and the two-model split exist to close that gap:
+
+- Set `ANTHROPIC_MODEL_FAST=claude-haiku-4-5`. Classification is the high-volume,
+  low-ambiguity route and this is where the volume is. Commitment extraction
+  stays on the better model, because a wrong answer there becomes a wrong row in
+  someone's ledger — which is the whole product.
+- Keep the per-sync message caps (25 free, 200 Pro). They are the ceiling on
+  what a single user can cost you in a day.
+- Sync daily, not hourly. Hourly multiplies the bill by 24 for very little gain.
+
+Even then Pro is thin. Treat ₹99 as a launch price that buys users, and watch
+actual per-user token spend in the Anthropic console before scaling it.
+
+Also budget for: Razorpay taking ~2% + ₹3 per transaction (≈5% of a ₹99 charge),
+and 18% GST if you are registered.
+
 ## Background jobs
 
 The product only works if it runs without you. Two Vercel Crons, declared in

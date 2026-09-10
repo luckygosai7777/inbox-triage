@@ -6,51 +6,57 @@ import MarketingNav from '@/components/MarketingNav';
 
 export const metadata: Metadata = {
   title: 'Pricing — Inbox Triage',
-  description: 'Free to start. Pro for people who live in their inbox.',
+  description: 'Free to start. ₹99 a month for people who live in their inbox.',
   robots: { index: true, follow: true },
 };
 
+/**
+ * Prices are in rupees because that is where the customers are. Each plan's
+ * limits are not arbitrary — they are set by what a user costs to serve, which
+ * is dominated by the LLM calls a sync makes. See the note in the README on
+ * unit economics before changing any number here.
+ */
 const PLANS = [
   {
     name: 'Free',
-    price: '$0',
+    price: '₹0',
     cadence: 'forever',
     pitch: 'Enough to find out what you have forgotten.',
     cta: 'Start free',
     featured: false,
     features: [
       ['One Google account', true],
-      ['50 messages per sync', true],
-      ['Commitment ledger', true],
+      ['25 messages per sync', true],
+      ['The ledger — everything you owe', true],
       ['Reply schedule from your calendar', true],
-      ['3 syncs per day', true],
-      ['Sent-mail history beyond 30 days', false],
+      ['Sync by hand, twice a day', true],
+      ['Automatic daily sync', false],
       ['Daily digest email', false],
-      ['Priority support', false],
+      ['Sent mail older than 30 days', false],
     ] as const,
   },
   {
     name: 'Pro',
-    price: '$12',
+    price: '₹99',
     cadence: 'per month',
     pitch: 'For people whose reputation runs on replying.',
     cta: 'Start free, upgrade later',
     featured: true,
     features: [
       ['Everything in Free', true],
-      ['500 messages per sync', true],
-      ['Unlimited sent-mail history', true],
-      ['Hourly automatic sync', true],
+      ['200 messages per sync', true],
+      ['Automatic daily sync', true],
       ['Daily digest of what is due', true],
-      ['Bulk send composer', true],
+      ['Full sent-mail history', true],
+      ['Thread reader and reply drafts', true],
       ['Subscription cleanup', true],
-      ['Priority support', true],
+      ['Email support', true],
     ] as const,
   },
   {
     name: 'Team',
-    price: '$29',
-    cadence: 'per seat / month',
+    price: '₹399',
+    cadence: 'per person / month',
     pitch: 'When somebody else needs to see the ledger too.',
     cta: 'Talk to us',
     featured: false,
@@ -59,11 +65,38 @@ const PLANS = [
       ['Shared team ledger', true],
       ['See what is owed across the team', true],
       ['Handover when someone is away', true],
-      ['SAML single sign-on', true],
+      ['Priority sync', true],
       ['Audit log', true],
-      ['Data residency options', true],
       ['Onboarding call', true],
+      ['Invoice billing', true],
     ] as const,
+  },
+];
+
+const FAQ = [
+  {
+    q: 'Do I need a card to start?',
+    a: 'No. The free plan needs a Google account and nothing else. You will not be asked for payment details until you choose to upgrade.',
+  },
+  {
+    q: 'What happens if I hit the free limits?',
+    a: 'Syncs pause until the next day and older sent mail is not scanned. Nothing is deleted, and the ledger you already have keeps working.',
+  },
+  {
+    q: 'Why is there a message limit at all?',
+    a: 'Every sync reads your mail with a language model, and that has a real per-message cost. The limits are what let the price stay at ₹99 rather than ten times that. If you regularly need more, tell us — we would rather know than have you hit a wall.',
+  },
+  {
+    q: 'Can I cancel?',
+    a: 'Any time, from Settings. You keep Pro until the end of the period you have paid for, then drop to Free. Nothing is deleted when you downgrade.',
+  },
+  {
+    q: 'Is GST included?',
+    a: 'Prices shown are exclusive of GST. Indian customers will see 18% added at checkout where applicable.',
+  },
+  {
+    q: 'Do you take UPI?',
+    a: 'Yes — UPI, cards, net banking and wallets, through Razorpay. UPI Autopay handles the monthly renewal.',
   },
 ];
 
@@ -76,7 +109,7 @@ export default function PricingPage() {
         <div className="marketing-wrap">
           <span className="eyebrow">Pricing</span>
           <h1 className="hero-title" style={{ fontSize: 'clamp(30px, 4.4vw, 46px)' }}>
-            Cheaper than the client you lose
+            Less than one missed reply
           </h1>
           <p className="hero-sub">
             One forgotten promise costs more than a year of this. Start free — you only find out
@@ -85,10 +118,7 @@ export default function PricingPage() {
 
           <div className="price-grid">
             {PLANS.map((plan) => (
-              <div
-                key={plan.name}
-                className={plan.featured ? 'price-card featured' : 'price-card'}
-              >
+              <div key={plan.name} className={plan.featured ? 'price-card featured' : 'price-card'}>
                 {plan.featured && (
                   <span className="eyebrow" style={{ marginBottom: 14 }}>
                     Most popular
@@ -123,7 +153,8 @@ export default function PricingPage() {
           </div>
 
           <p className="small muted" style={{ marginTop: 24 }}>
-            Prices in USD, excluding any local sales tax. Cancel any time from Settings.
+            Prices in Indian rupees, exclusive of GST. Pay by UPI, card or net banking. Cancel any
+            time from Settings. Two months free on annual plans.
           </p>
         </div>
       </section>
@@ -132,24 +163,7 @@ export default function PricingPage() {
         <div className="marketing-wrap" style={{ maxWidth: 760 }}>
           <h2 className="section-title">Pricing questions</h2>
           <div className="stack gap-12" style={{ marginTop: 28 }}>
-            {[
-              {
-                q: 'Do I need a card to start?',
-                a: 'No. The free plan needs a Google account and nothing else.',
-              },
-              {
-                q: 'What happens if I hit the free limits?',
-                a: 'Syncs stop until the next day, and older sent mail is not scanned. Nothing is deleted, and the ledger you already have keeps working.',
-              },
-              {
-                q: 'Can I cancel?',
-                a: 'Any time, from Settings. You keep Pro until the end of the period you paid for, then drop to Free. Nothing is deleted on downgrade.',
-              },
-              {
-                q: 'Is there a discount for annual billing?',
-                a: 'Two months free on annual plans. Choose it at checkout.',
-              },
-            ].map((item) => (
+            {FAQ.map((item) => (
               <details key={item.q} className="faq">
                 <summary>{item.q}</summary>
                 <p className="small secondary" style={{ marginTop: 10, lineHeight: 1.7 }}>
