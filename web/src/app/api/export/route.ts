@@ -45,7 +45,7 @@ export const GET = route(
       // hand a copy of mailbox access to whatever reads the downloaded file.
     }
 
-    const filename = `inbox-triage-export-${new Date().toISOString().slice(0, 10)}.json`;
+    const filename = `owed-export-${new Date().toISOString().slice(0, 10)}.json`;
     return new NextResponse(JSON.stringify(payload, null, 2), {
       headers: {
         'Content-Type': 'application/json',

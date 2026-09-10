@@ -8,8 +8,8 @@ export default function Footer() {
       <div className="footer-grid">
         <div className="footer-col" style={{ maxWidth: 300 }}>
           <Link href="/" className="brand" style={{ marginBottom: 4 }}>
-            <span className="brand-mark">T</span>
-            Inbox Triage
+            <span className="brand-mark">O</span>
+            Owed
           </Link>
           <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
             The to-do list you never had to write. Built from the promises already sitting in your
@@ -34,7 +34,7 @@ export default function Footer() {
         className="footer-grid"
         style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}
       >
-        <span className="tiny muted">© {year} Inbox Triage. All rights reserved.</span>
+        <span className="tiny muted">© {year} Owed. All rights reserved.</span>
         <span className="tiny muted">
           Use of Google data follows the Google API Services User Data Policy, including the
           Limited Use requirements.

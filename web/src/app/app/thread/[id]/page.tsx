@@ -4,7 +4,7 @@ import Shell from '@/components/Shell';
 import Thread from '@/components/Thread';
 import { currentUser } from '@/lib/supabase';
 
-export const metadata = { title: 'Thread — Inbox Triage' };
+export const metadata = { title: 'Thread — Owed' };
 
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await currentUser();

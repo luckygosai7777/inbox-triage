@@ -1,8 +1,8 @@
-# Inbox Triage
+# Owed
 
 **Gmail shows you what arrived. This shows you what you owe.**
 
-Live: https://inbox-triage-xi.vercel.app
+Live: https://owed-xi.vercel.app
 
 ---
 

@@ -5,12 +5,12 @@ import MarketingNav from '@/components/MarketingNav';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Inbox Triage — the to-do list you never had to write',
+  title: 'Owed — the to-do list you never had to write',
   description:
     'Reads your sent mail and tells you what you owe, to whom, and by when. Gmail shows what arrived; this shows what you promised.',
   robots: { index: true, follow: true },
   openGraph: {
-    title: 'Inbox Triage — know what you owe',
+    title: 'Owed — know what you owe',
     description:
       'It reads your sent mail for the promises you made and forgot. One list, ordered by what is late.',
     type: 'website',
@@ -83,7 +83,7 @@ export default function LandingPage() {
 
           <p className="hero-sub">
             You wrote “I’ll send it Friday” and moved on. That sentence is now sitting in your Sent
-            folder, where nobody will ever read it again — including you. Inbox Triage reads it,
+            folder, where nobody will ever read it again — including you. Owed reads it,
             and hands you the list.
           </p>
 
@@ -255,7 +255,7 @@ export default function LandingPage() {
                   </tr>
                 ))}
                 <tr className="highlight">
-                  <td style={{ fontWeight: 700, color: 'var(--accent)' }}>Inbox Triage</td>
+                  <td style={{ fontWeight: 700, color: 'var(--accent)' }}>Owed</td>
                   <td style={{ color: 'var(--text-primary)' }}>
                     Reads your sent mail for promises you made
                   </td>

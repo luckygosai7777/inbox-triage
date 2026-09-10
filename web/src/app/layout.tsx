@@ -6,7 +6,7 @@ import '@/styles/global.css';
 export const metadata: Metadata = {
   // Makes every relative URL in page metadata resolve against the real host.
   metadataBase: new URL(appUrl()),
-  title: 'Inbox Triage',
+  title: 'Owed',
   description: 'Know what you owe, to whom, by when — and whether today has room for it.',
   // The app is behind auth and has nothing to gain from indexing.
   robots: { index: false, follow: false },

@@ -1,4 +1,4 @@
--- Inbox Triage — Supabase schema
+-- Owed — Supabase schema
 --
 -- Run this once in the Supabase SQL editor (Dashboard → SQL Editor → New query).
 -- You never write SQL after this; the app queries through the Supabase client's

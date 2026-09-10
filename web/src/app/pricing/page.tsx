@@ -5,7 +5,7 @@ import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Inbox Triage',
+  title: 'Pricing — Owed',
   description: 'Free to start. ₹99 a month for people who live in their inbox.',
   robots: { index: true, follow: true },
 };

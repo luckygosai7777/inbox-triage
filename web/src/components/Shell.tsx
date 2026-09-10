@@ -51,8 +51,8 @@ export default function Shell({
     <Toast.Provider value={value}>
       <div className="shell">
         <nav className="nav-rail" aria-label="Main">
-          <Link href="/app" className="nav-logo" style={{ textDecoration: 'none' }} title="Inbox Triage">
-            T
+          <Link href="/app" className="nav-logo" style={{ textDecoration: 'none' }} title="Owed">
+            O
           </Link>
 
           {NAV.map((item) => (

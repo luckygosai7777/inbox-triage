@@ -5,8 +5,8 @@ import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — Inbox Triage',
-  description: 'What Inbox Triage reads, what it stores, and how to delete it.',
+  title: 'Privacy Policy — Owed',
+  description: 'What Owed reads, what it stores, and how to delete it.',
   robots: { index: true, follow: true },
 };
 
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
 
           <h2>1. Who we are</h2>
           <p>
-            Inbox Triage (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides an email triage and
+            Owed (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides an email triage and
             commitment-tracking service. {/* TODO: replace with your legal entity and address */}
             <strong> TODO: add your legal entity name, registered address and contact email</strong>{' '}
             before publishing. Questions:{' '}
@@ -99,7 +99,7 @@ export default function PrivacyPage() {
             </li>
             <li>We never share your data for advertising.</li>
             <li>
-              No human at Inbox Triage reads your mail, except where you explicitly ask us to
+              No human at Owed reads your mail, except where you explicitly ask us to
               investigate a problem and give permission for that specific case.
             </li>
           </ul>
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
           <h2>5. Limited Use disclosure</h2>
           <div className="callout">
             <p>
-              Inbox Triage&rsquo;s use and transfer of information received from Google APIs adheres
+              Owed&rsquo;s use and transfer of information received from Google APIs adheres
               to the{' '}
               <a
                 href="https://developers.google.com/terms/api-services-user-data-policy"

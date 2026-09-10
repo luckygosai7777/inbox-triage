@@ -4,7 +4,7 @@ import Settings from '@/components/Settings';
 import Shell from '@/components/Shell';
 import { currentUser } from '@/lib/supabase';
 
-export const metadata = { title: 'Settings — Inbox Triage' };
+export const metadata = { title: 'Settings — Owed' };
 
 export default async function SettingsPage() {
   const user = await currentUser();

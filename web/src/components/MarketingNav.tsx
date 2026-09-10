@@ -19,8 +19,8 @@ export default async function MarketingNav() {
   return (
     <header className="marketing-nav">
       <Link href="/" className="brand">
-        <span className="brand-mark">T</span>
-        Inbox Triage
+        <span className="brand-mark">O</span>
+        Owed
       </Link>
 
       <div className="spacer" />

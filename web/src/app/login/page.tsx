@@ -72,10 +72,10 @@ export default function LoginPage() {
               fontWeight: 700,
             }}
           >
-            T
+            O
           </span>
           <h1 className="h1" style={{ fontSize: 20 }}>
-            Inbox Triage
+            Owed
           </h1>
         </div>
 

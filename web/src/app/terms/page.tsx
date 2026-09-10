@@ -5,8 +5,8 @@ import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — Inbox Triage',
-  description: 'The agreement between you and Inbox Triage.',
+  title: 'Terms of Service — Owed',
+  description: 'The agreement between you and Owed.',
   robots: { index: true, follow: true },
 };
 
@@ -36,7 +36,7 @@ export default function TermsPage() {
 
           <h2>1. Agreement</h2>
           <p>
-            By using Inbox Triage (&ldquo;the Service&rdquo;) you agree to these terms. If you do not
+            By using Owed (&ldquo;the Service&rdquo;) you agree to these terms. If you do not
             agree, do not use the Service. If you use it on behalf of an organisation, you confirm
             you have authority to bind that organisation.
           </p>
