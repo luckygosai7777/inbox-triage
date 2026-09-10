@@ -99,11 +99,21 @@ Set in middleware, so a newly added page cannot forget them:
 | `Permissions-Policy` | Camera/mic/geolocation access |
 | `Cross-Origin-Opener-Policy` | Cross-window tampering |
 
-The CSP has **no `unsafe-inline` for scripts**, so an injected `<script>` cannot
-run. `connect-src` is limited to self and Supabase, so even a hypothetical
-injected script could not exfiltrate anywhere. `unsafe-inline` remains for
-*styles* only, because the UI computes style attributes at render time
-(capacity-bar widths, priority colours); inline CSS is not an execution vector.
+`script-src` uses a **per-request nonce plus `strict-dynamic`** — no
+`unsafe-inline`. Middleware mints a fresh nonce for every request and Next.js
+stamps it on the scripts it emits; anything injected has no nonce and does not
+execute.
+
+This was not true in the first version, which shipped `'unsafe-inline'` in
+`script-src` while this document claimed otherwise. `unsafe-inline` allows *any*
+inline script, including an attacker's, which makes the rest of the policy close
+to decorative. Verified after the fix: 11 of 11 script tags carry the nonce, and
+the header and document values match within a request.
+
+`unsafe-inline` remains for *styles* only, because the UI computes style
+attributes at render time (capacity-bar widths, priority colours); inline CSS is
+not an execution vector. `connect-src` is limited to self and Supabase, so even a
+hypothetical injected script could not exfiltrate anywhere.
 
 ## 7. Prompt injection
 

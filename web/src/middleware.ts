@@ -42,16 +42,24 @@ const demoMode = () =>
  * execute. connect-src is limited to self plus Supabase, so an injected script
  * could not exfiltrate to an attacker's host even if one ran.
  */
-function contentSecurityPolicy(): string {
+function contentSecurityPolicy(nonce: string): string {
   const supabase = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const supabaseWs = supabase.replace(/^https/, 'wss');
   const dev = process.env.NODE_ENV !== 'production';
 
   return [
     "default-src 'self'",
-    // Next.js injects a small inline bootstrap; in production it is hashed by
-    // the framework, in dev it needs eval for fast refresh.
-    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}`,
+    // Nonce + strict-dynamic rather than 'unsafe-inline'.
+    //
+    // Next.js needs an inline bootstrap script, and the lazy way to allow that
+    // is 'unsafe-inline' — which also allows any script an attacker manages to
+    // inject, making the whole policy near-worthless for XSS. Instead a fresh
+    // nonce is minted per request; Next stamps it on its own scripts, and
+    // 'strict-dynamic' lets those load the rest. An injected <script> has no
+    // nonce and does not run.
+    //
+    // Dev still needs 'unsafe-eval' for fast refresh; production does not.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https://*.googleusercontent.com",
@@ -64,9 +72,9 @@ function contentSecurityPolicy(): string {
   ].join('; ');
 }
 
-function applySecurityHeaders(response: NextResponse): NextResponse {
+function applySecurityHeaders(response: NextResponse, nonce: string): NextResponse {
   const headers = response.headers;
-  headers.set('Content-Security-Policy', contentSecurityPolicy());
+  headers.set('Content-Security-Policy', contentSecurityPolicy(nonce));
   headers.set('X-Frame-Options', 'DENY');
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -116,8 +124,20 @@ function hasSessionCookie(request: NextRequest): boolean {
     .some((cookie) => /^sb-.+-auth-token(\.\d+)?$/.test(cookie.name) && cookie.value.length > 0);
 }
 
+/**
+ * Forwards the nonce to the renderer. Next.js reads `x-nonce` and stamps it on
+ * the script tags it emits, which is what makes strict-dynamic work.
+ */
+function withNonce(request: NextRequest, nonce: string): NextResponse {
+  const headers = new Headers(request.headers);
+  headers.set('x-nonce', nonce);
+  return NextResponse.next({ request: { headers } });
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Fresh per request. A reused nonce is no better than unsafe-inline.
+  const nonce = crypto.randomUUID().replace(/-/g, '');
   const isProtected = pathname === '/app' || pathname.startsWith('/app/');
 
   // Demo mode: no auth at all, and /login is meaningless.
@@ -126,9 +146,9 @@ export function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/app';
       url.search = '';
-      return applySecurityHeaders(NextResponse.redirect(url));
+      return applySecurityHeaders(NextResponse.redirect(url), nonce);
     }
-    return applySecurityHeaders(NextResponse.next());
+    return applySecurityHeaders(withNonce(request, nonce), nonce);
   }
 
   // Cron routes are called by Vercel's scheduler, not a browser: no Origin
@@ -145,6 +165,7 @@ export function middleware(request: NextRequest) {
   ) {
     return applySecurityHeaders(
       NextResponse.json({ error: 'Cross-origin request rejected' }, { status: 403 }),
+      nonce,
     );
   }
 
@@ -160,7 +181,7 @@ export function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.search = configured ? `?next=${encodeURIComponent(pathname)}` : '?setup=1';
-      return applySecurityHeaders(NextResponse.redirect(url));
+      return applySecurityHeaders(NextResponse.redirect(url), nonce);
     }
   }
 
@@ -169,10 +190,10 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/app';
     url.search = '';
-    return applySecurityHeaders(NextResponse.redirect(url));
+    return applySecurityHeaders(NextResponse.redirect(url), nonce);
   }
 
-  return applySecurityHeaders(NextResponse.next());
+  return applySecurityHeaders(withNonce(request, nonce), nonce);
 }
 
 export const config = {
