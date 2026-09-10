@@ -11,34 +11,44 @@ import 'server-only';
 
 import { z } from 'zod';
 
+/**
+ * Every value is trimmed on the way in.
+ *
+ * Pasting into a dashboard field routinely picks up a trailing space or
+ * newline, and the failure is silent and confusing: a URL that will not parse,
+ * a key the provider rejects as malformed. /api/health reports `hasWhitespace`
+ * so it is visible; this makes it harmless.
+ */
+const trimmed = () => z.string().trim();
+
 const schema = z.object({
   // --- Supabase -----------------------------------------------------------
   // Optional only so demo mode can boot with no Supabase project. Every
   // real code path still fails loudly if they are missing.
-  NEXT_PUBLIC_SUPABASE_URL: z.string().default(''),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().default(''),
+  NEXT_PUBLIC_SUPABASE_URL: trimmed().default(''),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: trimmed().default(''),
   // Bypasses Row Level Security. Server-side only, never in a client bundle.
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: trimmed().min(20).optional(),
 
   // --- Google -------------------------------------------------------------
-  GOOGLE_CLIENT_ID: z.string().default(''),
-  GOOGLE_CLIENT_SECRET: z.string().default(''),
+  GOOGLE_CLIENT_ID: trimmed().default(''),
+  GOOGLE_CLIENT_SECRET: trimmed().default(''),
 
   // --- Claude -------------------------------------------------------------
-  ANTHROPIC_API_KEY: z.string().default(''),
+  ANTHROPIC_API_KEY: trimmed().default(''),
   // Used where judgement matters: commitment extraction and VIP briefs.
-  ANTHROPIC_MODEL: z.string().default('claude-opus-5'),
+  ANTHROPIC_MODEL: trimmed().default('claude-opus-5'),
   // Used for inbox classification, which is high-volume and low-ambiguity.
   // Defaults to the same model; set it to a cheaper one to cut the per-user
   // cost of a sync roughly fivefold. See README -> Unit economics.
-  ANTHROPIC_MODEL_FAST: z.string().default(''),
+  ANTHROPIC_MODEL_FAST: trimmed().default(''),
   LLM_ENABLED: z
     .string()
     .default('true')
     .transform((v) => v.toLowerCase() !== 'false'),
 
   // --- App ----------------------------------------------------------------
-  TOKEN_ENCRYPTION_KEY: z.string().default(''),
+  TOKEN_ENCRYPTION_KEY: trimmed().default(''),
   DEMO_MODE: z
     .string()
     .default('false')
