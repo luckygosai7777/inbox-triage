@@ -128,9 +128,9 @@ export function renderDigestHtml(digest: Digest, appUrl: string, now = new Date(
     const items = rows
       .map(
         (row) => `
-      <tr><td style="padding:12px 0;border-bottom:1px solid #26262c;">
-        <div style="font:600 15px/1.4 -apple-system,Segoe UI,sans-serif;color:#f4f4f5;">${esc(row.what)}</div>
-        <div style="font:400 13px/1.5 -apple-system,Segoe UI,sans-serif;color:#a1a1aa;margin-top:4px;">${esc(describe(row, now))}</div>
+      <tr><td style="padding:12px 0;border-bottom:1px solid #efeae1;">
+        <div style="font:600 15px/1.4 -apple-system,Segoe UI,sans-serif;color:#1a1714;">${esc(row.what)}</div>
+        <div style="font:400 13px/1.5 -apple-system,Segoe UI,sans-serif;color:#635c54;margin-top:4px;">${esc(describe(row, now))}</div>
       </td></tr>`,
       )
       .join('');
@@ -142,25 +142,25 @@ export function renderDigestHtml(digest: Digest, appUrl: string, now = new Date(
   };
 
   return `<!doctype html>
-<html><body style="margin:0;padding:24px;background:#0d0d0f;">
+<html><body style="margin:0;padding:24px;background:#faf8f4;">
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
 <tr><td align="center">
-<table width="100%" style="max-width:560px;background:#16161a;border:1px solid #26262c;border-radius:12px;padding:24px;" cellpadding="0" cellspacing="0" role="presentation">
+<table width="100%" style="max-width:560px;background:#ffffff;border:1px solid #e9e3d9;border-radius:12px;padding:24px;" cellpadding="0" cellspacing="0" role="presentation">
   <tr><td>
-    <div style="font:700 13px/1 -apple-system,Segoe UI,sans-serif;color:#f0883e;">INBOX TRIAGE</div>
-    <div style="font:600 22px/1.25 -apple-system,Segoe UI,sans-serif;color:#f4f4f5;margin-top:10px;">${esc(digest.heading)}</div>
-    <div style="font:400 13px/1.5 -apple-system,Segoe UI,sans-serif;color:#71717a;margin-top:6px;">${digest.totalOpen} open in total</div>
+    <div style="font:700 13px/1 -apple-system,Segoe UI,sans-serif;color:#b4441e;">OWED</div>
+    <div style="font:600 22px/1.25 -apple-system,Segoe UI,sans-serif;color:#1a1714;margin-top:10px;">${esc(digest.heading)}</div>
+    <div style="font:400 13px/1.5 -apple-system,Segoe UI,sans-serif;color:#8a8178;margin-top:6px;">${digest.totalOpen} open in total</div>
   </td></tr>
-  ${block('Late', digest.overdue, '#f87171')}
-  ${block('Due today', digest.today, '#f5c451')}
-  ${block('Been waiting a while', digest.stale, '#71717a')}
+  ${block('Late', digest.overdue, '#9f1239')}
+  ${block('Due today', digest.today, '#a16207')}
+  ${block('Been waiting a while', digest.stale, '#8a8178')}
   <tr><td style="padding-top:28px;">
-    <a href="${appUrl}/app/ledger" style="display:inline-block;background:#f0883e;color:#1a0f06;font:600 14px/1 -apple-system,Segoe UI,sans-serif;padding:12px 20px;border-radius:8px;text-decoration:none;">See the full list</a>
+    <a href="${appUrl}/app/ledger" style="display:inline-block;background:#b4441e;color:#ffffff;font:600 14px/1 -apple-system,Segoe UI,sans-serif;padding:12px 20px;border-radius:8px;text-decoration:none;">See the full list</a>
   </td></tr>
-  <tr><td style="padding-top:24px;border-top:1px solid #26262c;margin-top:24px;">
-    <div style="font:400 12px/1.5 -apple-system,Segoe UI,sans-serif;color:#52525b;">
+  <tr><td style="padding-top:24px;border-top:1px solid #e9e3d9;margin-top:24px;">
+    <div style="font:400 12px/1.5 -apple-system,Segoe UI,sans-serif;color:#8a8178;">
       You get this because daily digests are on.
-      <a href="${appUrl}/app/settings" style="color:#71717a;">Turn them off</a>.
+      <a href="${appUrl}/app/settings" style="color:#b4441e;">Turn them off</a>.
     </div>
   </td></tr>
 </table>
