@@ -139,10 +139,13 @@ export const POST = route<z.infer<typeof schema>>(
       });
     } catch (error) {
       if (error instanceof LLMUnavailable) {
-        // The provider's own wording can name keys and projects. Do not pass
-        // it through; it is already logged server-side.
+        // These messages are written by us, not by the provider, and are
+        // deliberately specific: "no model named X" and "rejected the API key"
+        // are fixable in a minute, while "unavailable, try again shortly" sends
+        // someone away to wait for a problem that will never clear on its own.
+        // The provider's own prose, which can name a project, stays in the log.
         console.warn('[draft] provider failed:', (error as Error).message);
-        throw new HttpError(503, 'The writing model is unavailable right now. Try again shortly.');
+        throw new HttpError(503, `Could not write a draft — ${(error as Error).message}.`);
       }
       throw error;
     }

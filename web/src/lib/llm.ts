@@ -124,8 +124,15 @@ export function activeProvider(): 'anthropic' | 'gemini' | 'none' {
  * Gemini rejects several JSON Schema keywords that Anthropic accepts, and the
  * failure is a 400 with no hint about which one. Strip to the subset it
  * documents rather than discover them one at a time in production.
+ *
+ * The subtlety that made the first version of this silently useless: the
+ * filter must apply to schema *keywords* only. `properties` is a map of the
+ * caller's own field names, and `required` is a list of them — run the keyword
+ * filter over those and every field disappears, leaving a schema that demands
+ * required fields it does not define. The model then has nothing to fill in,
+ * so the reply comes back empty and the button looks broken.
  */
-function geminiSchema(schema: any): any {
+export function geminiSchema(schema: any): any {
   if (Array.isArray(schema)) return schema.map(geminiSchema);
   if (!schema || typeof schema !== 'object') return schema;
   const ALLOWED = new Set([
@@ -135,6 +142,22 @@ function geminiSchema(schema: any): any {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(schema)) {
     if (!ALLOWED.has(key)) continue;
+
+    if (key === 'properties' && value && typeof value === 'object') {
+      // Field names are data. Keep every one; clean only what it maps to.
+      const properties: Record<string, unknown> = {};
+      for (const [field, subSchema] of Object.entries(value as Record<string, unknown>)) {
+        properties[field] = geminiSchema(subSchema);
+      }
+      out[key] = properties;
+      continue;
+    }
+    // `required` and `enum` are lists of plain strings, not schemas.
+    if (key === 'required' || key === 'enum') {
+      out[key] = value;
+      continue;
+    }
+
     out[key] = geminiSchema(value);
   }
   return out;
@@ -174,8 +197,29 @@ async function geminiRequest<T>(
   }
 
   if (!response.ok) {
-    // The body names the project and sometimes the key prefix. Log the status
-    // only, and never let either reach the client.
+    // Google's error body says exactly what is wrong — a bad key, a model name
+    // that does not exist, a malformed schema. The status alone says none of
+    // that, and debugging this from a bare "400" cost an evening. So: log the
+    // reason where an operator can read it, return the shape to the caller,
+    // and keep the prose (which can name the project) out of the response.
+    const detail = await response.text().catch(() => '');
+    let reason = '';
+    try {
+      reason = JSON.parse(detail)?.error?.status || JSON.parse(detail)?.error?.message || '';
+    } catch {
+      reason = detail.slice(0, 300);
+    }
+    console.warn(`[gemini] ${response.status} ${env().GEMINI_MODEL}: ${reason}`);
+
+    if (response.status === 400 && /API_KEY|api key/i.test(reason)) {
+      throw new LLMUnavailable('gemini rejected the API key');
+    }
+    if (response.status === 404) {
+      throw new LLMUnavailable(`gemini has no model named "${env().GEMINI_MODEL}"`);
+    }
+    if (response.status === 429) {
+      throw new LLMUnavailable('gemini free-tier rate limit reached');
+    }
     throw new LLMUnavailable(`gemini call failed: ${response.status}`);
   }
 
@@ -183,7 +227,13 @@ async function geminiRequest<T>(
   const blocked = data?.promptFeedback?.blockReason;
   if (blocked) throw new LLMUnavailable(`gemini declined (${blocked})`);
 
-  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? '';
+  const candidate = data?.candidates?.[0];
+  // A truncated response is not an empty one, and saying so saves guessing.
+  if (candidate?.finishReason && !['STOP', 'MAX_TOKENS'].includes(candidate.finishReason)) {
+    throw new LLMUnavailable(`gemini stopped early (${candidate.finishReason})`);
+  }
+
+  const text = candidate?.content?.parts?.map((p: any) => p.text).join('') ?? '';
   if (!text) throw new LLMUnavailable('gemini returned nothing');
 
   try {
