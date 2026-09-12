@@ -47,6 +47,18 @@ const schema = z.object({
     .default('true')
     .transform((v) => v.toLowerCase() !== 'false'),
 
+  // --- Gemini (the no-cost option) ----------------------------------------
+  // Google's free tier has no card attached, which is the whole point of it
+  // being here. Read the privacy note in README before pointing a real
+  // mailbox at it: on the FREE tier Google may use the content for product
+  // improvement, and the content here is other people's email.
+  GEMINI_API_KEY: trimmed().default(''),
+  GEMINI_MODEL: trimmed().default('gemini-2.0-flash'),
+
+  // 'auto' prefers Anthropic when its key is present and falls back to Gemini.
+  // Set it explicitly to pin one provider regardless of which keys exist.
+  AI_PROVIDER: z.enum(['auto', 'anthropic', 'gemini']).default('auto'),
+
   // --- App ----------------------------------------------------------------
   TOKEN_ENCRYPTION_KEY: trimmed().default(''),
   DEMO_MODE: z

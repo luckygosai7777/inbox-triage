@@ -27,6 +27,7 @@ import {
   type Direction,
 } from './commitments';
 import { env } from './env';
+import { describeVoice, findTells, foreignLinks, type VoiceProfile } from './voice';
 import { extractDeadline, stripQuoted, type SenderKind } from './parsing';
 
 /**
@@ -88,6 +89,98 @@ function modelFor(tier: 'fast' | 'careful'): string {
   return config.ANTHROPIC_MODEL;
 }
 
+/**
+ * Which provider answers.
+ *
+ * Anthropic wins when its key is present, because it is the path with the
+ * structured-output guarantees and the refusal fallback. Gemini exists so the
+ * app runs on a free key with no card attached — the difference between a tool
+ * someone can try and one they cannot.
+ */
+export function activeProvider(): 'anthropic' | 'gemini' | 'none' {
+  const config = env();
+  if (!config.LLM_ENABLED) return 'none';
+  if (config.AI_PROVIDER === 'anthropic') return config.ANTHROPIC_API_KEY ? 'anthropic' : 'none';
+  if (config.AI_PROVIDER === 'gemini') return config.GEMINI_API_KEY ? 'gemini' : 'none';
+  if (config.ANTHROPIC_API_KEY) return 'anthropic';
+  if (config.GEMINI_API_KEY) return 'gemini';
+  // No key set. The SDK can still find CLI credentials, so let Anthropic try.
+  return 'anthropic';
+}
+
+/**
+ * Gemini rejects several JSON Schema keywords that Anthropic accepts, and the
+ * failure is a 400 with no hint about which one. Strip to the subset it
+ * documents rather than discover them one at a time in production.
+ */
+function geminiSchema(schema: any): any {
+  if (Array.isArray(schema)) return schema.map(geminiSchema);
+  if (!schema || typeof schema !== 'object') return schema;
+  const ALLOWED = new Set([
+    'type', 'format', 'description', 'nullable', 'enum',
+    'properties', 'required', 'items', 'propertyOrdering',
+  ]);
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (!ALLOWED.has(key)) continue;
+    out[key] = geminiSchema(value);
+  }
+  return out;
+}
+
+async function geminiRequest<T>(
+  system: string,
+  user: string,
+  schema: Record<string, unknown>,
+  maxTokens: number,
+): Promise<T> {
+  const config = env();
+  const model = encodeURIComponent(config.GEMINI_MODEL);
+  const url =
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      // The key goes in a header, never the query string: URLs end up in
+      // proxy logs and error reports.
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': config.GEMINI_API_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: user }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: geminiSchema(schema),
+          maxOutputTokens: maxTokens,
+          temperature: 0.4,
+        },
+      }),
+    });
+  } catch (error: any) {
+    throw new LLMUnavailable(`gemini unreachable: ${error?.name ?? error}`);
+  }
+
+  if (!response.ok) {
+    // The body names the project and sometimes the key prefix. Log the status
+    // only, and never let either reach the client.
+    throw new LLMUnavailable(`gemini call failed: ${response.status}`);
+  }
+
+  const data: any = await response.json();
+  const blocked = data?.promptFeedback?.blockReason;
+  if (blocked) throw new LLMUnavailable(`gemini declined (${blocked})`);
+
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? '';
+  if (!text) throw new LLMUnavailable('gemini returned nothing');
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new LLMUnavailable('gemini response was not valid JSON');
+  }
+}
+
 async function request<T>({
   system,
   user,
@@ -103,6 +196,9 @@ async function request<T>({
   maxTokens: number;
   tier?: 'fast' | 'careful';
 }): Promise<T> {
+  if (activeProvider() === 'gemini') {
+    return geminiRequest<T>(system, user, schema, maxTokens);
+  }
   const anthropic = client();
 
   const params = {
@@ -617,4 +713,129 @@ export async function extractCommitments(input: {
       now: input.now,
     });
   }
+}
+
+// -------------------------------------------------------------------- drafting
+
+export type DraftInput = {
+  /** The thread, oldest first. */
+  messages: Array<{ fromName: string; fromEmail: string; sentAt: string; isOutbound: boolean; body: string }>;
+  subject: string;
+  /** Who the reply goes to. */
+  recipientName: string;
+  /** The user's own name, for the sign-off. */
+  senderName: string;
+  voice: VoiceProfile;
+};
+
+export type Draft = {
+  body: string;
+  /** What the model understood they were asking for. Shown to the user. */
+  asks: string[];
+  /** Points the draft deliberately leaves blank for the user to fill. */
+  gaps: string[];
+  /** Stock phrases that were removed or flagged after generation. */
+  tells: string[];
+};
+
+const DRAFT_SCHEMA = {
+  type: 'object',
+  properties: {
+    body: { type: 'string' },
+    asks: { type: 'array', items: { type: 'string' } },
+    gaps: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['body', 'asks', 'gaps'],
+  additionalProperties: false,
+} as const;
+
+/*
+ * Note what this prompt does NOT say: "make it sound human", "write naturally",
+ * "be conversational". Those are unfalsifiable — the model cannot check its own
+ * output against them, and in practice they produce a performance of
+ * friendliness rather than this person's actual voice. Every instruction below
+ * is either measured from their sent mail or checkable in the output.
+ */
+const DRAFT_SYSTEM = `You draft a reply that the mailbox owner will read, edit, and send under their own name. You are writing as them, not as an assistant.
+
+${INJECTION_NOTICE}
+
+The thread is quoted below. Work out what the other person actually wants, then answer it.
+
+HOW THIS PERSON WRITES — match it. These are measurements from their own sent mail, not style advice:
+{{VOICE}}
+
+RULES
+1. Answer the specific thing they asked. If they asked three things, cover three. If they asked nothing, keep it to an acknowledgement.
+2. Never invent a fact. You do not know prices, dates, availability, file contents, or what the owner has decided. Where the reply needs one, write a short bracketed placeholder like [date] or [price] and list it in "gaps".
+3. Never state a deadline or commitment the owner has not already made in this thread.
+4. No links, no attachments, no phone numbers unless they already appear in the thread.
+5. No greeting line other than the one measured above. No postscript. No subject line — the reply keeps the thread's subject.
+6. Length: aim for the reply length measured above. A short answer is not rude; padding is.
+7. Banned outright, because they are the phrases that make a letter read as generated: "I hope this email finds you well", "I hope you're doing well", "thank you for reaching out", "I wanted to reach out", "please don't hesitate", "feel free to", "as per your request", "delve into", "it's worth noting". Do not write a synonym of these either — just begin with the answer.
+8. Write plainly. Short sentences. No em-dashes unless the measurements above say they use them.
+
+"asks" is what you understood them to be asking for, in their words where possible, one entry each. If the answer needed information you do not have, every such point goes in "gaps" so the owner knows what to fill in before sending.
+
+Output the reply body only, as plain text with real line breaks.`;
+
+/**
+ * Draft one reply.
+ *
+ * The whole thread is untrusted input, so nothing the model returns is acted
+ * on: the draft lands in a textarea the user edits and then sends themselves
+ * from Gmail. Links the model invented are stripped before it gets there.
+ */
+export async function draftReply(input: DraftInput): Promise<Draft> {
+  const transcript = input.messages
+    .map((m) => {
+      const who = m.isOutbound ? `${input.senderName} (the owner)` : `${m.fromName || m.fromEmail}`;
+      return `[${m.sentAt}] ${who}:\n${m.body.slice(0, 4000)}`;
+    })
+    .join('\n\n---\n\n');
+
+  const voiceBlock = [
+    describeVoice(input.voice),
+    input.voice.samples.length
+      ? `\nTwo things they have actually written, to imitate for rhythm and word choice:\n${input.voice.samples
+          .slice(0, 2)
+          .map((sample, index) => `Example ${index + 1}:\n${sample}`)
+          .join('\n\n')}`
+      : '',
+  ].join('\n');
+
+  const system = DRAFT_SYSTEM.replace('{{VOICE}}', voiceBlock);
+  const user = [
+    `Subject: ${input.subject}`,
+    `Reply goes to: ${input.recipientName}`,
+    `Sign as: ${input.senderName}`,
+    '',
+    fence('thread', transcript),
+  ].join('\n');
+
+  const result = await request<{ body: string; asks: string[]; gaps: string[] }>({
+    system,
+    user,
+    schema: DRAFT_SCHEMA as unknown as Record<string, unknown>,
+    effort: 'medium',
+    maxTokens: 1200,
+    tier: 'careful',
+  });
+
+  let body = String(result.body ?? '').trim();
+
+  // A rule in a prompt is a request; a check on the output is a guarantee.
+  const tells = findTells(body);
+
+  // Strip links the model introduced. See voice.foreignLinks for why.
+  for (const link of foreignLinks(body, transcript)) {
+    body = body.split(link).join('[link removed]');
+  }
+
+  return {
+    body: body.slice(0, 6000),
+    asks: (result.asks ?? []).map((ask) => String(ask).slice(0, 200)).slice(0, 8),
+    gaps: (result.gaps ?? []).map((gap) => String(gap).slice(0, 200)).slice(0, 8),
+    tells,
+  };
 }

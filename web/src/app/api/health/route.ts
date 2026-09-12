@@ -12,6 +12,7 @@
  */
 import { route } from '@/lib/api';
 import { isDemo } from '@/lib/demo';
+import { activeProvider } from '@/lib/llm';
 import { adminClient } from '@/lib/supabase';
 
 /** Length and a coarse shape, so a truncated paste is visible without leaking. */
@@ -39,6 +40,7 @@ export const GET = route(async ({ user }) => {
     GOOGLE_CLIENT_ID: describe(env.GOOGLE_CLIENT_ID, /\.apps\.googleusercontent\.com$/),
     GOOGLE_CLIENT_SECRET: describe(env.GOOGLE_CLIENT_SECRET, /^GOCSPX-/),
     ANTHROPIC_API_KEY: describe(env.ANTHROPIC_API_KEY),
+    GEMINI_API_KEY: describe(env.GEMINI_API_KEY, /^AIza/),
     CRON_SECRET: describe(env.CRON_SECRET),
     APP_URL: describe(env.APP_URL),
   };
@@ -71,6 +73,17 @@ export const GET = route(async ({ user }) => {
     .filter(([, v]) => !v.set)
     .map(([k]) => k);
 
+  // Which provider a draft request would actually reach. Answering "why is
+  // drafting off" from the outside is otherwise guesswork.
+  const ai = {
+    provider: activeProvider(),
+    setting: env.AI_PROVIDER ?? 'auto',
+    model:
+      activeProvider() === 'gemini'
+        ? (env.GEMINI_MODEL ?? 'gemini-2.0-flash')
+        : (env.ANTHROPIC_MODEL ?? 'claude-opus-5'),
+  };
+
   return {
     deployment: {
       commit: env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
@@ -80,6 +93,7 @@ export const GET = route(async ({ user }) => {
     },
     config,
     google,
+    ai,
     missing,
     syncReady: missing.filter((k) => k.startsWith('GOOGLE_')).length === 0,
   };

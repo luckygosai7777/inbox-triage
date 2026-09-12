@@ -1496,3 +1496,22 @@ button:disabled {
     display: none;
   }
 }
+
+/* The reply draft. Monospace would read as code; this is prose the user sends. */
+.draft-box {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 12px 14px;
+}
+.draft-box:focus {
+  outline: none;
+  border-color: var(--accent);
+}
