@@ -46,6 +46,7 @@ export default function Thread({ threadId }: { threadId: string }) {
   const [draft, setDraft] = useState<DraftResult | null>(null);
   const [draftText, setDraftText] = useState('');
   const [drafting, setDrafting] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,6 +77,7 @@ export default function Thread({ threadId }: { threadId: string }) {
    */
   const writeDraft = async () => {
     setDrafting(true);
+    setDraftError(null);
     try {
       const response = await fetch('/api/draft', {
         method: 'POST',
@@ -91,7 +93,10 @@ export default function Thread({ threadId }: { threadId: string }) {
         say('No sent mail found yet, so this draft is not in your voice. Sync again after sending a few emails.');
       }
     } catch (caught) {
-      say((caught as Error).message);
+      // Kept on screen rather than announced in a toast. A toast is right for
+      // "done"; it is wrong for "here is what you must go and fix", which is
+      // gone before it has been read and cannot be read twice.
+      setDraftError((caught as Error).message);
     } finally {
       setDrafting(false);
     }
@@ -224,6 +229,31 @@ export default function Thread({ threadId }: { threadId: string }) {
                   {drafting ? 'Reading the thread…' : draft ? 'Write another' : 'Draft a reply'}
                 </button>
               </div>
+
+              {draftError && (
+                <div
+                  className="mt-12"
+                  style={{
+                    borderLeft: '3px solid var(--danger)',
+                    background: 'var(--bg-stripe)',
+                    borderRadius: 'var(--radius)',
+                    padding: 12,
+                  }}
+                  role="alert"
+                >
+                  <div className="small" style={{ fontWeight: 600, color: 'var(--danger)' }}>
+                    {draftError}
+                  </div>
+                  {/[Nn]o AI provider/.test(draftError) && (
+                    <div className="tiny muted mt-8" style={{ lineHeight: 1.7 }}>
+                      Drafting is the one feature that needs a model. Add{' '}
+                      <span className="mono">GEMINI_API_KEY</span> in Vercel → Settings →
+                      Environment Variables (free, from aistudio.google.com/apikey), then redeploy.
+                      Sorting and the ledger keep working without it.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {draft && (
                 <div className="stack gap-12 mt-16">

@@ -100,12 +100,24 @@ function modelFor(tier: 'fast' | 'careful'): string {
 export function activeProvider(): 'anthropic' | 'gemini' | 'none' {
   const config = env();
   if (!config.LLM_ENABLED) return 'none';
-  if (config.AI_PROVIDER === 'anthropic') return config.ANTHROPIC_API_KEY ? 'anthropic' : 'none';
+  // Naming a provider explicitly is taken at its word: it is the opt-in for a
+  // machine whose credentials come from somewhere the env does not show, such
+  // as a CLI profile in local development.
+  if (config.AI_PROVIDER === 'anthropic') return 'anthropic';
   if (config.AI_PROVIDER === 'gemini') return config.GEMINI_API_KEY ? 'gemini' : 'none';
   if (config.ANTHROPIC_API_KEY) return 'anthropic';
   if (config.GEMINI_API_KEY) return 'gemini';
-  // No key set. The SDK can still find CLI credentials, so let Anthropic try.
-  return 'anthropic';
+  // No key anywhere.
+  //
+  // This used to return 'anthropic' on the theory that the SDK might still find
+  // CLI credentials. On a server that is never true, and the cost of the guess
+  // was the worst kind of error: every caller sailed past the "no provider
+  // configured" check and failed deep inside the SDK instead, so a missing key
+  // surfaced as "the model is unavailable, try again shortly" — a transient
+  // -sounding message for a permanent, fixable problem.
+  //
+  // Anyone relying on CLI credentials can say so with AI_PROVIDER=anthropic.
+  return 'none';
 }
 
 /**
