@@ -415,7 +415,10 @@ async function syncCommitments(
     }
   }
   const unanswered = parsed
-    .filter((m) => !m.isOutbound && !m.isListMail)
+    // Only a person can be waiting on you. An automated "action required"
+    // notice is not owed an answer, and a ledger with one in it is a ledger
+    // people stop opening.
+    .filter((m) => !m.isOutbound && m.senderKind === 'person')
     .filter((m) => latestByThread.get(m.gmailThreadId)?.gmailMessageId === m.gmailMessageId)
     .filter((m) => !minedMessageIds.has(rowIdByGmail.get(m.gmailMessageId)))
     .sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime())

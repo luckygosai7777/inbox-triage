@@ -194,20 +194,20 @@ ${INJECTION_NOTICE}
 Return one result per message, matched by id.
 
 CATEGORY — pick exactly one:
-- Clients: a real person or company the owner has an actual working relationship with. Requires sender_kind "person". Prefer this when has_corresponded is true.
+- Clients: a real person or company with work to discuss — an enquiry, a request, a project, money, a deadline. Requires sender_kind "person". A first email from someone new counts: that is what a new client looks like. has_corresponded true makes it more certain, but is not required.
 - Collabs: a real person proposing or running joint work — podcasts, events, partnerships, speaking.
-- Personal: friends and family.
+- Personal: friends and family, with no work in the message.
 - Notifications: machine-sent mail that is not a newsletter or a receipt — security alerts, password resets, calendar invites, build failures, shipping updates, account notices.
-- Receipts: invoices, payments, payouts, billing, renewals, orders.
+- Receipts: invoices, payments, payouts, billing, renewals, orders — the automated record of a transaction.
 - Newsletters: anything sent to a mailing list for reading.
 - Social: notifications from social or collaboration platforms.
-- Other: a real person you cannot place — cold outreach, a stranger, an unclear one-off.
+- Other: a real person whose message is neither work nor personal, and asks for nothing.
 
 Two rules that override everything above:
 1. If sender_kind is "automated", the category MUST be Notifications or Receipts. A machine is never a Client, Collab or Personal, no matter how the message is worded.
-2. Never use Clients as a fallback. If you are unsure whether a human correspondent is a client, use Other. Guessing wrong here is worse than admitting you do not know, because Clients is the category the owner acts on first.
+2. When a human wants something from the owner, that is Clients, even on first contact and even if the message is short, blunt, or badly spelt. Missing a new client costs the owner work; a misfiled acquaintance costs them one glance.
 
-NEEDS_REPLY: true only when a human is waiting on a response from the mailbox owner. If sender_kind is "automated" or "list", it is always false — nobody is waiting. "Do not reply to this email" means false.
+NEEDS_REPLY: true only when a human is waiting on a response from the mailbox owner. An instruction counts as much as a question: "send me the file" and "don't forget the deck" are both waiting on a reply. If sender_kind is "automated" or "list", it is always false — nobody is waiting. "Do not reply to this email" means false.
 
 PRIORITY: 0 urgent (a person is blocked, or a stated deadline is near), 1 soon (a person expects a reply but nothing is blocked), 2 later (no reply needed). Anything with needs_reply false is 2.
 
@@ -245,6 +245,35 @@ const RECEIPT_WORDS =
   /\b(invoice|receipt|payout|payment|billing|renews?|renewal|subscription|order|refund)\b/i;
 const QUESTION_WORDS =
   /\b(can you|could you|would you|are you|will you|let me know|thoughts|confirm|sign|approve|review|available|when|what time|deadline|respond|reply|rsvp)\b/i;
+
+/*
+ * An ask is not always a question.
+ *
+ * "Send me the file" is a stronger demand than "could you possibly send the
+ * file?", yet it has no question mark and no polite question form. Looking only
+ * for questions meant the bluntest mail in the inbox — often the mail that
+ * matters most — scored as needing nothing.
+ */
+const IMPERATIVE_ASK =
+  /\b(?:(?:please\s+)?(?:send|share|forward|push|upload|deliver|provide|give|get|make|fix|finish|complete|prepare|draft|schedule|book|check)\s+(?:me|us|it|the|your|a|an|this|that|back|over)\b|(?:do\s*n[o']?t|dont)\s+forget|i\s+need\b|we\s+need\b|remind\s+me\b|get\s+back\s+to\s+me\b|looking\s+forward\s+to\s+(?:your|hearing)\b|awaiting\s+your\b|waiting\s+(?:on|for)\s+(?:you|your)\b)/i;
+
+/*
+ * Vocabulary that means this is work, whoever sent it. It tells a client from a
+ * friend when neither has asked for anything yet.
+ */
+const WORK_WORDS =
+  /\b(project|proposal|quote|quotation|contract|deliverable|scope|brief|deck|draft|design|website|web ?site|app|code|repo|repository|demo|meeting|call|timeline|budget|retainer|onboarding|requirement|feature|launch|campaign|collaboration|partnership|freelance|milestone|invoice|estimate)\b/i;
+
+/*
+ * Mailbox providers, as opposed to a company's own domain. A stranger writing
+ * from a company domain is probably business; a stranger writing from gmail
+ * could be either, so there the content has to decide.
+ */
+const FREEMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.in', 'yahoo.co.uk',
+  'outlook.com', 'hotmail.com', 'live.com', 'msn.com', 'icloud.com', 'me.com',
+  'aol.com', 'proton.me', 'protonmail.com', 'zoho.com', 'rediffmail.com',
+]);
 const URGENT_WORDS =
   /\b(urgent|asap|today|overdue|immediately|final notice|last chance|by end of day|eod)\b/i;
 const SOCIAL_DOMAINS = ['notion.so', 'github.com', 'slack.com', 'linkedin.com'];
@@ -255,8 +284,16 @@ const SOCIAL_DOMAINS = ['notion.so', 'github.com', 'slack.com', 'linkedin.com'];
  *
  * Used on the model's answer and on rows classified before these rules existed,
  * so a mislabelled message repairs itself on the next sync without spending a
- * token. A person-category has to be earned; it is never where things land by
- * default.
+ * token.
+ *
+ * It enforces one boundary: what a machine sent cannot be filed as a person.
+ * That is the check that actually fixed "Google security alert, filed under
+ * Clients", and it doubles as a prompt-injection defence — an email asking to
+ * be treated as an important client cannot talk its way past a header.
+ *
+ * It deliberately no longer demands prior correspondence. That rule buried the
+ * single most valuable message a freelancer gets: the first one from a new
+ * client, who by definition has never been written to.
  */
 export function clampCategory(
   proposed: unknown,
@@ -275,10 +312,6 @@ export function clampCategory(
         ? 'Newsletters'
         : 'Notifications';
   }
-  if (category === 'Clients' && !context.hasCorresponded) {
-    // Never written to them; "client" would be a guess.
-    category = kind === 'person' ? 'Other' : 'Notifications';
-  }
   return category;
 }
 
@@ -288,8 +321,17 @@ export function heuristicClassify(input: ClassifyInput): Classification {
   const kind: SenderKind =
     input.senderKind ?? (input.isListMail ? 'list' : 'person');
 
-  // Category. Note the order: machine-sent mail is settled before anything
-  // else gets a chance to call it a client.
+  // Does somebody want something? Settle that first — for a human sender it is
+  // what decides the category, not the other way round.
+  // A machine is never waiting on a reply from you.
+  const needsReply =
+    kind === 'person' &&
+    (QUESTION_WORDS.test(haystack) ||
+      IMPERATIVE_ASK.test(haystack) ||
+      input.subject.includes('?'));
+
+  // Category. Machine-sent mail is settled before anything else gets a chance
+  // to call it a client.
   let category: string;
   if (kind === 'automated') {
     category = RECEIPT_WORDS.test(haystack) ? 'Receipts' : 'Notifications';
@@ -297,24 +339,26 @@ export function heuristicClassify(input: ClassifyInput): Classification {
     category = RECEIPT_WORDS.test(haystack) ? 'Receipts' : 'Newsletters';
   } else if (SOCIAL_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))) {
     category = 'Social';
-  } else if (RECEIPT_WORDS.test(haystack)) {
-    category = 'Receipts';
-  } else if (input.hasCorresponded) {
-    // A person you have actually written to. That is what "client" means.
+  } else if (needsReply || WORK_WORDS.test(haystack)) {
+    // A person who wants something, or who is talking about work. First
+    // contact counts — that is exactly what a new client looks like.
     category = 'Clients';
+  } else if (RECEIPT_WORDS.test(haystack)) {
+    // After the ask, so a human chasing an invoice stays a client conversation
+    // while the automated copy of it stays a receipt.
+    category = 'Receipts';
+  } else if (FREEMAIL_DOMAINS.has(domain) || input.hasCorresponded) {
+    // Someone real, wanting nothing. A person, not a lead.
+    category = 'Personal';
   } else {
-    // A human, but a stranger. Could be a lead, could be cold outreach.
-    // Calling it a client would be a guess, so do not.
     category = 'Other';
   }
-
-  // A machine is never waiting on a reply from you.
-  const needsReply =
-    kind === 'person' && (QUESTION_WORDS.test(haystack) || input.subject.includes('?'));
 
   const deadline = extractDeadline(haystack);
   let priority = 2;
   if (needsReply && (deadline.matched || URGENT_WORDS.test(haystack))) priority = 0;
+  // Someone you have written to before, asking again, outranks a stranger.
+  else if (needsReply && input.hasCorresponded) priority = 0;
   else if (needsReply) priority = 1;
 
   const words = (input.body ?? input.preview).split(/\s+/).filter(Boolean).length;

@@ -97,7 +97,12 @@ describe('heuristicClassify', () => {
     expect(row.category).toBe('Receipts');
   });
 
-  it('calls a stranger Other, however human they look', () => {
+  it('treats a first-contact enquiry as a client, not a stranger', () => {
+    // This assertion used to read `toBe('Other')`, on the theory that calling
+    // someone a client before you had written back was a guess. It is the
+    // opposite: an enquiry about your rates from someone you have never met is
+    // a new client, and burying it under Other is the worst thing this app
+    // could do to a freelancer.
     const row = classify({
       fromName: 'Priya Nair',
       fromEmail: 'priya@newagency.com',
@@ -106,8 +111,7 @@ describe('heuristicClassify', () => {
       senderKind: 'person',
       hasCorresponded: false,
     });
-    expect(row.category).toBe('Other');
-    // Still a real question from a real person — it should be answerable.
+    expect(row.category).toBe('Clients');
     expect(row.needsReply).toBe(true);
   });
 
@@ -170,10 +174,13 @@ describe('clampCategory — the repair pass over rows classified by older rules'
     ).toBe('Clients');
   });
 
-  it('demotes a client the user has never written to', () => {
+  it('does not demote a client just because they are new', () => {
+    // The clamp guards one boundary only: machine versus person. Prior
+    // correspondence is a useful signal for ranking, never a licence to be a
+    // client.
     expect(
       clampCategory('Clients', 'person', { text: 'Re: contract', hasCorresponded: false }),
-    ).toBe('Other');
+    ).toBe('Clients');
   });
 
   it('rejects a category that is not one of ours', () => {

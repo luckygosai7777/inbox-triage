@@ -77,6 +77,34 @@ const ASK_PATTERNS: RegExp[] = [
   /\bwaiting\s+(?:on|for)\s+(?:you|your)\b/i,
   /\bwhen\s+(?:can|will|do)\s+you\b/i,
   /\bneed\s+(?:your|an answer|a decision|sign-?off)\b/i,
+
+  /*
+   * Imperatives. People ask for things far more often by instruction than by
+   * question — "send me the file", "don't forget the deck" — and none of the
+   * question forms above catch any of it. A real email that read
+   * "Dont forget me to send your gmail website code" reached the inbox,
+   * the ledger and the reply queue without registering anywhere.
+   */
+  /\b(?:please\s+)?(?:send|share|forward|push|upload|deliver|provide|give|get|prepare|draft|finish|complete|fix|schedule|book)\s+(?:me|us|it|the|your|a|an|this|that|back|over)\b/i,
+  /\b(?:do\s*n[o']?t|dont)\s+forget\b/i,
+  /\b(?:i|we)\s+need\b/i,
+  /\bremind\s+me\b/i,
+  /\bget\s+back\s+to\s+me\b/i,
+  /\blooking\s+forward\s+to\s+(?:your|hearing)\b/i,
+  /\bawaiting\s+your\b/i,
+];
+
+/*
+ * Said by the sender about themselves, so not an ask of you.
+ *
+ * Without this, "I'll send the deck tomorrow" matches "send the" and lands in
+ * your ledger as something *they* wanted from *you* — the exact inversion the
+ * Ledger cannot afford, since a row you do not owe is a row that teaches you to
+ * stop trusting the list.
+ */
+const SPEAKER_PROMISE_PATTERNS: RegExp[] = [
+  /\b(?:i|we)\s*(?:'ll|’ll|\s+will|\s+shall|\s+am going to|\s+are going to)\b/i,
+  /\b(?:i|we)\s+(?:have|'ve|’ve)\s+(?:already\s+)?(?:sent|shared|attached|pushed)\b/i,
 ];
 
 const MAX_WHAT = 120;
@@ -113,6 +141,8 @@ export function extractCommitmentsHeuristic(
     if (sentence.length < 8 || sentence.length > 400) continue;
     if (!matchesAny(sentence, patterns)) continue;
     if (options.direction === 'owed' && matchesAny(sentence, HEDGE_PATTERNS)) continue;
+    // "I'll send the files" is them promising, not them asking.
+    if (options.direction !== 'owed' && matchesAny(sentence, SPEAKER_PROMISE_PATTERNS)) continue;
 
     const what = tidy(sentence);
     const key = what.toLowerCase();
