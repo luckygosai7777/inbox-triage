@@ -18,6 +18,7 @@ import { env } from './env';
 import {
   classifyMessages,
   clampCategory,
+  heuristicClassify,
   extractCommitments,
   parseBrief,
   type ClassifyInput,
@@ -215,7 +216,7 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
   // --- messages -----------------------------------------------------------
   const { data: existing } = await db
     .from('messages')
-    .select('gmail_message_id, classified_at, category, needs_reply')
+    .select('gmail_message_id, classified_at, category, needs_reply, priority, due_at')
     .eq('user_id', userId)
     .in('gmail_message_id', parsed.map((m) => m.gmailMessageId));
 
@@ -317,21 +318,61 @@ export async function syncMailbox(userId: string, maxResults?: number): Promise<
     const stored = storedById.get(message.gmailMessageId);
     if (!stored) continue;
 
-    const category = clampCategory(stored.category, message.senderKind, {
+    const hasCorresponded = correspondents.has(message.fromEmail.toLowerCase());
+
+    // What today's rules make of this message, computed locally.
+    const local = heuristicClassify({
+      id: message.gmailMessageId,
+      fromName: message.fromName,
+      fromEmail: message.fromEmail,
+      subject: message.subject,
+      preview: message.preview,
+      body: message.body,
+      isListMail: message.isListMail,
+      senderKind: message.senderKind,
+      hasCorresponded,
+    });
+
+    // 1. The machine/person boundary, always enforced. This only ever demotes.
+    let category = clampCategory(stored.category, message.senderKind, {
       text: message.subject + message.preview,
-      hasCorresponded: correspondents.has(message.fromEmail.toLowerCase()),
+      hasCorresponded,
     });
     // Only a person can owe you a reply.
-    const needsReply = message.senderKind === 'person' && Boolean(stored.needs_reply);
+    let needsReply = message.senderKind === 'person' && Boolean(stored.needs_reply);
+    let priority = Number(stored.priority ?? 2);
+    let dueAt = stored.due_at ?? null;
 
-    if (category === stored.category && needsReply === Boolean(stored.needs_reply)) continue;
+    // 2. Recover from the old catch-alls.
+    //
+    // Demoting alone is not enough. Two earlier rules sent real mail into dead
+    // ends that nothing could lift it out of: Clients demanded prior
+    // correspondence, so a first email from a new client became Other; and an
+    // ask had to be a question, so "send me the code" scored as needing no
+    // reply. Re-syncing would have left both exactly where they were.
+    //
+    // Other is a category that means "we could not place this", so re-deciding
+    // it loses no judgement, and a promotion to needs_reply only ever surfaces
+    // something that was hidden.
+    if (category === 'Other' && local.category !== 'Other') {
+      category = local.category;
+    }
+    if (!needsReply && local.needsReply && message.senderKind === 'person') {
+      needsReply = true;
+      priority = local.priority;
+      dueAt = local.dueAt ? local.dueAt.toISOString() : null;
+    }
+
+    const sameCategory = category === stored.category;
+    const sameReply = needsReply === Boolean(stored.needs_reply);
+    if (sameCategory && sameReply) continue;
 
     await db
       .from('messages')
       .update({
         category,
         needs_reply: needsReply,
-        ...(needsReply ? {} : { due_at: null, priority: 2 }),
+        ...(needsReply ? { priority, due_at: dueAt } : { due_at: null, priority: 2 }),
       })
       .eq('user_id', userId)
       .eq('gmail_message_id', message.gmailMessageId);
