@@ -1909,3 +1909,22 @@ a .card:hover,
     order: -1;
   }
 }
+
+/* The one control that spends a model call, marked so it cannot be mistaken
+   for the ordinary one beside it. Rust text on a tinted ground rather than a
+   filled button: it is an offer, not the primary path. */
+.btn-ai {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 600;
+}
+.btn-ai:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.btn-ai span[aria-hidden] {
+  font-size: 0.9em;
+  opacity: 0.85;
+}

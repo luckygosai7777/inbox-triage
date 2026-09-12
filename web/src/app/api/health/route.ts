@@ -12,7 +12,7 @@
  */
 import { route } from '@/lib/api';
 import { isDemo } from '@/lib/demo';
-import { activeProvider } from '@/lib/llm';
+import { activeProvider, geminiModelReport } from '@/lib/llm';
 import { adminClient } from '@/lib/supabase';
 
 /** Length and a coarse shape, so a truncated paste is visible without leaking. */
@@ -80,9 +80,16 @@ export const GET = route(async ({ user }) => {
     setting: env.AI_PROVIDER ?? 'auto',
     model:
       activeProvider() === 'gemini'
-        ? (env.GEMINI_MODEL ?? 'gemini-2.0-flash')
+        ? (env.GEMINI_MODEL || 'auto-discovered')
         : (env.ANTHROPIC_MODEL ?? 'claude-opus-5'),
   };
+
+  // What this key can actually see. The whole "no model named X" outage was
+  // invisible from outside because nothing could answer this question.
+  let geminiModels: unknown = { checked: false };
+  if (activeProvider() === 'gemini') {
+    geminiModels = await geminiModelReport();
+  }
 
   return {
     deployment: {
@@ -94,6 +101,7 @@ export const GET = route(async ({ user }) => {
     config,
     google,
     ai,
+    geminiModels,
     missing,
     syncReady: missing.filter((k) => k.startsWith('GOOGLE_')).length === 0,
   };

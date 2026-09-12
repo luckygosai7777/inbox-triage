@@ -92,3 +92,78 @@ describe('geminiSchema', () => {
     expect(out.properties.results.items).not.toHaveProperty('additionalProperties');
   });
 });
+
+/**
+ * Choosing a model.
+ *
+ * The outage this replaces: GEMINI_MODEL defaulted to the literal string
+ * "gemini-2.0-flash", a key that did not serve that exact id got a 404, and
+ * there was no way from inside the app to learn what the key *could* serve.
+ * The catalogue is now read at runtime and ranked by this function.
+ */
+import { scoreGeminiModel } from '@/lib/llm';
+
+function best(ids: string[]): string {
+  return [...ids]
+    .map((id) => ({ id, score: scoreGeminiModel(id) }))
+    .filter((m) => m.score >= 0)
+    .sort((a, b) => b.score - a.score)[0]!.id;
+}
+
+describe('scoreGeminiModel', () => {
+  it('rejects models that cannot write a reply', () => {
+    for (const id of [
+      'text-embedding-004', 'embedding-001', 'aqa', 'imagen-3.0-generate-001',
+      'veo-2.0', 'gemini-2.0-flash-live-001', 'gemini-2.5-flash-tts',
+    ]) {
+      expect(scoreGeminiModel(id), id).toBeLessThan(0);
+    }
+  });
+
+  it('rejects anything that is not a gemini text model', () => {
+    expect(scoreGeminiModel('some-other-model')).toBeLessThan(0);
+  });
+
+  it('prefers flash over pro — this workload is high volume, low ambiguity', () => {
+    expect(scoreGeminiModel('gemini-2.5-flash')).toBeGreaterThan(scoreGeminiModel('gemini-2.5-pro'));
+  });
+
+  it('prefers newer over older within a tier', () => {
+    expect(scoreGeminiModel('gemini-2.5-flash')).toBeGreaterThan(scoreGeminiModel('gemini-1.5-flash'));
+    expect(scoreGeminiModel('gemini-3.0-flash')).toBeGreaterThan(scoreGeminiModel('gemini-2.5-flash'));
+  });
+
+  it('prefers a stable build over a preview or dated one', () => {
+    expect(scoreGeminiModel('gemini-2.5-flash')).toBeGreaterThan(
+      scoreGeminiModel('gemini-2.5-flash-preview'),
+    );
+    expect(scoreGeminiModel('gemini-2.5-flash')).toBeGreaterThan(
+      scoreGeminiModel('gemini-2.5-flash-001'),
+    );
+  });
+
+  it('prefers full flash over lite', () => {
+    expect(scoreGeminiModel('gemini-2.5-flash')).toBeGreaterThan(
+      scoreGeminiModel('gemini-2.5-flash-lite'),
+    );
+  });
+
+  it('picks something sensible from a realistic catalogue', () => {
+    const catalogue = [
+      'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-lite',
+      'gemini-2.5-flash', 'gemini-2.5-flash-preview-09-2025', 'gemini-2.5-pro',
+      'text-embedding-004', 'aqa', 'imagen-3.0-generate-001',
+    ];
+    expect(best(catalogue)).toBe('gemini-2.5-flash');
+  });
+
+  it('still finds a usable model when no flash tier exists', () => {
+    expect(best(['gemini-2.5-pro', 'text-embedding-004'])).toBe('gemini-2.5-pro');
+  });
+
+  it('copes with a catalogue of names it has never seen', () => {
+    // The whole point: a future name must still rank, not crash or be excluded.
+    const future = best(['gemini-4.0-flash', 'gemini-3.5-pro', 'embedding-002']);
+    expect(future).toBe('gemini-4.0-flash');
+  });
+});

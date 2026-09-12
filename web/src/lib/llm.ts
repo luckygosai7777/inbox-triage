@@ -163,14 +163,128 @@ export function geminiSchema(schema: any): any {
   return out;
 }
 
+/*
+ * WHICH GEMINI MODEL — asked, not assumed.
+ *
+ * The default used to be the literal string "gemini-2.0-flash", and a key that
+ * did not serve that exact id got a 404 and no drafts, for a reason nobody
+ * could have guessed from the outside. Hardcoding an id is a guess about a
+ * remote catalogue we cannot see and Google changes without telling us, so the
+ * guess is guaranteed to rot. It is also unfixable by the user: there is no
+ * way to know from inside this app what their key is entitled to.
+ *
+ * So the model is discovered. The catalogue is listed once per process, the
+ * best available candidate is chosen and cached, and a 404 mid-flight clears
+ * that cache and re-resolves once. GEMINI_MODEL still wins when set, for
+ * pinning a specific model — but even then a 404 falls through to discovery
+ * rather than simply failing, because a pin that has been retired should
+ * degrade, not break.
+ */
+let resolvedModel: string | null = null;
+
+/**
+ * How much we want a given model for this workload, higher is better.
+ *
+ * Classification and drafting are high-volume and low-ambiguity, so the flash
+ * tier is the right default on both cost and latency. Pure and exported so the
+ * ranking is testable without a network call.
+ */
+export function scoreGeminiModel(id: string): number {
+  const name = id.toLowerCase();
+
+  // Wrong job entirely — these cannot write a reply.
+  if (/embedding|aqa|imagen|image-gen|veo|tts|\bvision\b|live-|-live|learnlm/.test(name)) {
+    return -1;
+  }
+  if (!name.startsWith('gemini')) return -1;
+
+  let score = 0;
+  // Newer is better. "gemini-2.5-flash" -> 2.5
+  const version = name.match(/gemini-(\d+)(?:\.(\d+))?/);
+  if (version) score += Number(version[1]) * 20 + Number(version[2] ?? 0) * 2;
+
+  if (name.includes('flash')) score += 100;   // the right tier for this work
+  else if (name.includes('pro')) score += 40; // works, costs more
+
+  if (name.includes('lite')) score -= 15;     // cheaper, noticeably weaker
+  if (/preview|exp|-\d{3,}$/.test(name)) score -= 30; // dated or unstable builds
+  if (name.includes('thinking')) score -= 10; // slower, no benefit here
+
+  return score;
+}
+
+/** Ask Google what this key can actually use. */
+async function listGeminiModels(): Promise<string[]> {
+  const config = env();
+  const response = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',
+    { headers: { 'x-goog-api-key': config.GEMINI_API_KEY } },
+  );
+  if (!response.ok) {
+    throw new LLMUnavailable(
+      response.status === 400 || response.status === 403
+        ? 'gemini rejected the API key'
+        : `gemini model list failed: ${response.status}`,
+    );
+  }
+  const data: any = await response.json();
+  return (data?.models ?? [])
+    .filter((m: any) => (m?.supportedGenerationMethods ?? []).includes('generateContent'))
+    .map((m: any) => String(m?.name ?? '').replace(/^models\//, ''))
+    .filter(Boolean);
+}
+
+/** The model to call, resolving and caching on first use. */
+async function geminiModel(force = false): Promise<string> {
+  const config = env();
+  if (!force) {
+    if (resolvedModel) return resolvedModel;
+    if (config.GEMINI_MODEL) return config.GEMINI_MODEL;
+  }
+
+  const available = await listGeminiModels();
+  const ranked = available
+    .map((id) => ({ id, score: scoreGeminiModel(id) }))
+    .filter((m) => m.score >= 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (!ranked.length) {
+    throw new LLMUnavailable(
+      `this Gemini key has no model that can generate text (saw ${available.length})`,
+    );
+  }
+
+  resolvedModel = ranked[0].id;
+  console.warn(`[gemini] using ${resolvedModel} (chose from ${ranked.length} candidates)`);
+  return resolvedModel;
+}
+
+/** Diagnostics for /api/health — never called on a request path. */
+export async function geminiModelReport(): Promise<{
+  chosen: string | null;
+  available: string[];
+  error?: string;
+}> {
+  try {
+    const available = await listGeminiModels();
+    const chosen = await geminiModel(true);
+    return { chosen, available: available.slice(0, 40) };
+  } catch (error) {
+    return { chosen: null, available: [], error: (error as Error).message };
+  }
+}
+
 async function geminiRequest<T>(
   system: string,
   user: string,
   schema: Record<string, unknown>,
   maxTokens: number,
+  /** Set once we have already re-resolved the model, to stop a retry loop. */
+  rediscovered = false,
 ): Promise<T> {
   const config = env();
-  const model = encodeURIComponent(config.GEMINI_MODEL);
+  const chosen = await geminiModel(rediscovered);
+  const model = encodeURIComponent(chosen);
   const url =
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
@@ -209,13 +323,20 @@ async function geminiRequest<T>(
     } catch {
       reason = detail.slice(0, 300);
     }
-    console.warn(`[gemini] ${response.status} ${env().GEMINI_MODEL}: ${reason}`);
+    console.warn(`[gemini] ${response.status} ${chosen}: ${reason}`);
 
     if (response.status === 400 && /API_KEY|api key/i.test(reason)) {
       throw new LLMUnavailable('gemini rejected the API key');
     }
+    if (response.status === 404 && !rediscovered) {
+      // The pinned or cached model is gone. Re-read the catalogue and try once
+      // more, rather than making a retired id a permanent outage.
+      console.warn(`[gemini] "${chosen}" is not available — re-resolving`);
+      resolvedModel = null;
+      return geminiRequest<T>(system, user, schema, maxTokens, true);
+    }
     if (response.status === 404) {
-      throw new LLMUnavailable(`gemini has no model named "${env().GEMINI_MODEL}"`);
+      throw new LLMUnavailable(`gemini served no usable model (tried "${chosen}")`);
     }
     if (response.status === 429) {
       throw new LLMUnavailable('gemini free-tier rate limit reached');

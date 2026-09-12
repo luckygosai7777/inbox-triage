@@ -53,7 +53,11 @@ const schema = z.object({
   // mailbox at it: on the FREE tier Google may use the content for product
   // improvement, and the content here is other people's email.
   GEMINI_API_KEY: trimmed().default(''),
-  GEMINI_MODEL: trimmed().default('gemini-2.0-flash'),
+  // Empty on purpose: the model is discovered from the catalogue the key can
+  // actually see. A default here is a guess about a remote list that Google
+  // changes, and a wrong guess is a 404 with no way for the user to know what
+  // to set instead. Set this only to pin one deliberately.
+  GEMINI_MODEL: trimmed().default(''),
 
   // 'auto' prefers Anthropic when its key is present and falls back to Gemini.
   // Set it explicitly to pin one provider regardless of which keys exist.

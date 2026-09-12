@@ -200,20 +200,28 @@ export default function Composer({ threadId, to, subject, canDraft = true, onSen
   if (!open) {
     return (
       <div className="card card-pad">
+        {/*
+          These two were "Write a reply" and "Write it for me", which both open
+          with the same verb and read as the same offer. They are different
+          offers: one gives you an empty box, the other spends a model call and
+          hands back words in your own voice. The second now says what it does
+          and is marked as the machine doing it.
+        */}
         <div className="row wrap gap-8">
           <button type="button" className="btn btn-primary" onClick={() => setOpen(true)}>
-            Write a reply
+            Reply
           </button>
           {canDraft && (
             <button
               type="button"
-              className="btn"
+              className="btn btn-ai"
               onClick={() => {
                 setOpen(true);
                 void writeWithAi();
               }}
             >
-              Write it for me
+              <span aria-hidden="true">✦</span>
+              Draft it in my voice
             </button>
           )}
           <div className="spacer" />
@@ -374,8 +382,14 @@ export default function Composer({ threadId, to, subject, canDraft = true, onSen
         />
 
         {canDraft && (
-          <button type="button" className="btn btn-sm" onClick={writeWithAi} disabled={drafting}>
-            {drafting ? 'Reading the thread…' : meta ? 'Rewrite' : 'Write it for me'}
+          <button
+            type="button"
+            className="btn btn-sm btn-ai"
+            onClick={writeWithAi}
+            disabled={drafting}
+          >
+            <span aria-hidden="true">✦</span>
+            {drafting ? 'Reading the thread…' : meta ? 'Draft again' : 'Draft it in my voice'}
           </button>
         )}
 
