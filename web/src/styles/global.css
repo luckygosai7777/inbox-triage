@@ -1759,3 +1759,153 @@ a .card:hover,
 .nav-item {
   transition: background 0.18s var(--ease), color 0.18s var(--ease);
 }
+
+/* ============================================================== composer
+ *
+ * Gmail's compose window, minus the parts that exist because Gmail must serve
+ * everyone: no formatting bar, no signature editor, no confidential mode. What
+ * is left is the shape of the thing — recipient, subject, a large quiet box —
+ * on paper rather than in a floating panel.
+ */
+
+.composer {
+  overflow: hidden;
+}
+.composer-head {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-stripe);
+}
+
+/* One line per field, separated by a rule rather than boxed in. Input borders
+   on every row turn a form into a grid of cages. */
+.composer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-row);
+  min-height: 42px;
+}
+.composer-key {
+  flex: none;
+  width: 56px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.composer-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  padding: 10px 0;
+}
+.composer-cc {
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+}
+.composer-cc:hover {
+  color: var(--accent);
+}
+
+.composer-body {
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  min-height: 200px;
+  background: var(--bg-primary);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 16px;
+}
+.composer-body::placeholder {
+  color: var(--text-faint);
+}
+
+.composer-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px 12px;
+}
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 5px 8px 5px 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-pill);
+  background: var(--bg-chip);
+  font-size: 12px;
+}
+.file-chip button {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 50%;
+}
+.file-chip button:hover {
+  color: var(--danger);
+}
+
+.composer-notes {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--border-medium);
+  background: var(--bg-stripe);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.composer-error {
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--danger);
+  background: var(--danger-wash);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.composer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-stripe);
+}
+
+@media (max-width: 619px) {
+  .composer-key {
+    width: 44px;
+  }
+  /* Send should be reachable with a thumb and unmistakable. */
+  .composer-actions .btn-primary {
+    flex: 1 1 100%;
+    order: -1;
+  }
+}

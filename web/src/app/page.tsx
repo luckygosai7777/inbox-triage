@@ -45,7 +45,7 @@ const COMPARISON = [
 const FAQ = [
   {
     q: 'Can it send email as me?',
-    a: 'No. There is no send API access anywhere in the product. When you reply, it opens a Gmail compose tab pre-filled — you read it and press Send yourself. That is a deliberate design constraint, not a missing feature.',
+    a: 'It can send a reply you have written and read, from your own Gmail account, when you press Send. It cannot send anything you have not. There is no scheduled send, no auto-reply, and nothing automated that can reach your contacts — every message that leaves your account passed under your eyes first. That is a deliberate line, and it is the one that matters.',
   },
   {
     q: 'What does it do with my email?',
@@ -277,7 +277,7 @@ export default function LandingPage() {
 
           <div className="feature-grid" style={{ marginTop: 36 }}>
             {[
-              ['It cannot send mail', 'There is no send API access in the product at all. Replies open in Gmail for you to send. The click is always yours.'],
+              ['It never sends by itself', 'You can write and send a reply here, from your own account. Nothing automated can: no scheduled send, no auto-reply, no path to your contacts that does not go through you pressing send on a message you have read.'],
               ['Your tokens are encrypted', 'The key to your mailbox is encrypted with AES-256-GCM before it is stored. The database only ever holds ciphertext.'],
               ['Isolated at the database', 'Row-level security means the database itself refuses to return another account’s rows — not just the app code.'],
               ['It refuses to guess', 'A deadline is only shown when a real date parser confirmed it. Otherwise it says so. An AI that invents due dates is worse than none.'],

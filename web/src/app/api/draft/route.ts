@@ -1,12 +1,13 @@
 /**
  * POST /api/draft — a reply to one thread, written in the user's own voice.
  *
- * Two deliberate constraints, both product decisions rather than limitations:
+ * Two things remain true now that the app can send (see api/send):
  *
- *  1. This never sends anything. The app holds no send scope at all. The draft
- *     comes back as text the user edits and sends from Gmail themselves. An
- *     inbox tool that can email your clients unattended is a different and much
- *     more frightening product.
+ *  1. This route still sends nothing. It returns text into a box the user can
+ *     edit, and sending is a separate, deliberate act on a separate endpoint.
+ *     Nothing automated reaches either. An inbox tool that can email your
+ *     clients unattended is a different and much more frightening product, and
+ *     that line has not moved — only where the send button lives.
  *  2. Message bodies are read live from Gmail for this request and are never
  *     written to our database. The draft is not stored either. The most
  *     sensitive text in the system therefore exists only for the length of one
@@ -49,7 +50,7 @@ export const POST = route<z.infer<typeof schema>>(
         .maybeSingle(),
       db
         .from('messages')
-        .select('gmail_message_id, from_name, from_email, sent_at, is_outbound')
+        .select('gmail_message_id, from_name, from_email, sent_at, is_outbound, preview')
         .eq('user_id', user.id)
         .eq('thread_id', input.thread_id)
         .order('sent_at', { ascending: true }),
@@ -101,19 +102,53 @@ export const POST = route<z.infer<typeof schema>>(
       ),
     ]);
 
+    // Why a fetch failed matters, and used to be thrown away. An expired token,
+    // a deleted message and a Gmail outage all produced the same unhelpful
+    // "try again in a moment" for a user with nothing to try.
+    const failures = threadBodies.flatMap((settled) =>
+      settled.status === 'rejected' ? [settled.reason] : [],
+    );
+    if (failures.length) {
+      console.warn(
+        `[draft] ${failures.length}/${rows.length} bodies failed:`,
+        failures.map((error: any) => `${error?.code ?? ''} ${error?.message ?? error}`).join(' | '),
+      );
+    }
+
     const messages = rows.map((row: any, index: number) => {
       const settled = threadBodies[index];
+      const fetched = settled.status === 'fulfilled' ? settled.value.trim() : '';
       return {
         fromName: row.from_name ?? '',
         fromEmail: row.from_email ?? '',
         sentAt: new Date(row.sent_at).toISOString().slice(0, 16).replace('T', ' '),
         isOutbound: Boolean(row.is_outbound),
-        body: settled.status === 'fulfilled' ? settled.value : '',
+        // Falling back to the stored preview beats refusing to draft. A short
+        // reply written from the first 200 characters is worse than one written
+        // from the whole thread, and enormously better than nothing — which is
+        // what a hard failure here was delivering.
+        body: fetched || String(row.preview ?? '').trim(),
+        fromPreviewOnly: !fetched,
       };
     });
 
-    if (!messages.some((m) => m.body.trim())) {
-      throw new HttpError(502, 'Could not read the thread from Gmail. Try again in a moment.');
+    const usable = messages.filter((m) => m.body);
+    if (!usable.length) {
+      const reason = (failures[0] as any)?.message ?? '';
+      // 401/403 means the Google grant is stale, which no amount of retrying
+      // fixes — reconnecting does.
+      if (/invalid_grant|invalid credentials|unauthorized|insufficient/i.test(reason)) {
+        throw new HttpError(
+          409,
+          'Google access has expired. Open Settings and reconnect your account.',
+        );
+      }
+      throw new HttpError(
+        502,
+        failures.length
+          ? 'Gmail would not return this thread. It may have been deleted or moved.'
+          : 'This thread has no readable text to reply to.',
+      );
     }
 
     // A failed voice fetch is not a failed draft; it just means less evidence.
@@ -157,6 +192,9 @@ export const POST = route<z.infer<typeof schema>>(
       tells: draft.tells,
       to: (inbound as any).from_email,
       subject: (thread as any).subject ?? '',
+      // Honest about what it read. A draft built from previews is thinner and
+      // the user should know before they trust it.
+      fromPreviewOnly: messages.some((m) => m.body && m.fromPreviewOnly),
       voice: {
         // Shown in the UI so the user can see what it learned, and why a draft
         // reads the way it does.

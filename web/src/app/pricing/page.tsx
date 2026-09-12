@@ -118,8 +118,8 @@ const FAQ = [
     a: 'A drafted reply costs about ₹0.78 of model time to write, so sixty of them is most of what ₹499 buys. Unlimited would either mean a worse model or a higher price, and we would rather tell you the number than quietly make the writing worse.',
   },
   {
-    q: 'Can Owed send the emails for me?',
-    a: 'No, and that is deliberate. Owed holds no permission to send mail from your account — not a setting, an absence. Drafts open in Gmail with everything filled in and you press send. A tool that can email your clients unattended is a different and much more frightening product.',
+    q: 'Does Owed send email on my behalf?',
+    a: 'Yes — you write or generate a reply in Owed and press send, and it goes from your own Gmail account, in the right thread. What Owed will never do is send on its own. There is no scheduled send, no auto-reply, and no path by which a message leaves your account without you having read it and pressed the button. A tool that can email your clients unattended is a different and much more frightening product.',
   },
   {
     q: 'What happens if I hit a limit?',
