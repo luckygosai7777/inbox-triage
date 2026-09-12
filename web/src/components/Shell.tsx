@@ -6,6 +6,8 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState } fro
 
 import { createBrowserClient } from '@supabase/ssr';
 
+import Logo from './Logo';
+
 const NAV = [
   { href: '/app', label: 'Inbox', short: 'Inbox', icon: <span style={{ width: 16, height: 12, border: '1.5px solid currentColor', borderRadius: 2 }} /> },
   { href: '/app/ledger', label: 'What you owe', short: 'Owed', icon: <span style={{ width: 14, height: 14, border: '1.5px solid currentColor', borderRadius: 3, borderLeftWidth: 4 }} /> },
@@ -51,8 +53,8 @@ export default function Shell({
     <Toast.Provider value={value}>
       <div className="shell">
         <nav className="nav-rail" aria-label="Main">
-          <Link href="/app" className="nav-logo" style={{ textDecoration: 'none' }} title="Owed">
-            O
+          <Link href="/app" className="nav-logo" title="Owed" aria-label="Owed — home">
+            <Logo size={28} />
           </Link>
 
           {NAV.map((item) => (

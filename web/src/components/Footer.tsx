@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import Logo from './Logo';
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -8,7 +10,7 @@ export default function Footer() {
       <div className="footer-grid">
         <div className="footer-col" style={{ maxWidth: 300 }}>
           <Link href="/" className="brand" style={{ marginBottom: 4 }}>
-            <span className="brand-mark">O</span>
+            <Logo size={24} />
             Owed
           </Link>
           <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>

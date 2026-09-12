@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { currentUser } from '@/lib/supabase';
 
+import Logo from './Logo';
+
 /**
  * Public site header. Server component so it can show "Open app" to someone
  * already signed in, rather than sending them back through a login they do
@@ -19,7 +21,7 @@ export default async function MarketingNav() {
   return (
     <header className="marketing-nav">
       <Link href="/" className="brand">
-        <span className="brand-mark">O</span>
+        <Logo size={24} />
         Owed
       </Link>
 

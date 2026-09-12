@@ -74,6 +74,14 @@
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* The mark takes the page's ink so it belongs to the paper. The check keeps
+     its green: a tick reads as "done" in green and as something else in rust.
+     Green appears nowhere else in the chrome, so it stays a brand signal
+     rather than a second accent competing with the first. */
+  --logo-ink: #1a1714;
+  --logo-check: #22a55f;
+  --logo-disc: #f1faf4;
+
   color-scheme: light;
 }
 
@@ -261,22 +269,25 @@ button:disabled {
   padding: 16px 0;
 }
 .nav-logo {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: var(--radius);
-  background: var(--accent);
+  background: transparent;
   display: grid;
   place-items: center;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--accent-ink);
   margin-bottom: 16px;
   padding: 0;
+  text-decoration: none;
+  transition: transform 0.22s var(--ease);
 }
-.nav-logo:hover {
-  background: var(--accent-hover);
+/* The mark turns a few degrees on hover — it is a circular arrow, so rotation
+   is the one motion that reads as the logo doing what it depicts. */
+.nav-logo:hover svg {
+  transform: rotate(45deg);
+}
+.nav-logo svg {
+  transition: transform 0.45s var(--ease);
 }
 .nav-item {
   width: 40px;
@@ -1234,16 +1245,12 @@ a .card:hover,
   font-weight: 600;
   font-size: 15px;
 }
+/* Retired with the letter-in-a-box logo — the mark is its own shape now and
+   a tile behind it only made it smaller. Kept as a no-op guard in case a
+   stray usage survives somewhere. */
 .brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-ink);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
 }
 .nav-links {
   display: flex;
