@@ -1,11 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 
-import { useToast } from './Shell';
 
 type Item = {
   id: string;
+  /* Sent by /api/schedule from the first commit and never read here, which is
+     how the button below came to be wired to nothing. */
+  threadId: string | null;
   fromName: string;
   fromEmail: string;
   subject: string;
@@ -41,7 +44,6 @@ type Data = {
 };
 
 export default function Schedule() {
-  const { say } = useToast();
   const [blockMinutes, setBlockMinutes] = useState(30);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function Schedule() {
                   </span>
                 </div>
               ) : (
-                <SlotCard key={row.key} slot={row} say={say} />
+                <SlotCard key={row.key} slot={row} />
               ),
             )}
 
@@ -122,7 +124,7 @@ export default function Schedule() {
                 </div>
               </div>
               {data!.overflow.map((item) => (
-                <ReplyRow key={item.id} item={item} say={say} showDraft={false} />
+                <ReplyRow key={item.id} item={item} showDraft={false} />
               ))}
             </div>
           )}
@@ -176,7 +178,7 @@ export default function Schedule() {
   );
 }
 
-function SlotCard({ slot, say }: { slot: Extract<Row, { type: 'slot' }>; say: (m: string) => void }) {
+function SlotCard({ slot }: { slot: Extract<Row, { type: 'slot' }> }) {
   const capacityColor = slot.overCapacity
     ? 'var(--danger)'
     : slot.usedMinutes === 0
@@ -206,7 +208,7 @@ function SlotCard({ slot, say }: { slot: Extract<Row, { type: 'slot' }>; say: (m
       </div>
 
       {slot.items.map((item) => (
-        <ReplyRow key={item.id} item={item} say={say} />
+        <ReplyRow key={item.id} item={item} />
       ))}
 
       {!slot.items.length && (
@@ -218,15 +220,7 @@ function SlotCard({ slot, say }: { slot: Extract<Row, { type: 'slot' }>; say: (m
   );
 }
 
-function ReplyRow({
-  item,
-  say,
-  showDraft = true,
-}: {
-  item: Item;
-  say: (m: string) => void;
-  showDraft?: boolean;
-}) {
+function ReplyRow({ item, showDraft = true }: { item: Item; showDraft?: boolean }) {
   return (
     <div className="slot-item">
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -259,15 +253,23 @@ function ReplyRow({
         )}
       </div>
 
-      {showDraft && (
-        <button
-          type="button"
+      {/*
+        This was a button that announced "Draft opened for ..." and opened
+        nothing — a toast with no action behind it. A control that lies about
+        what it did is worse than no control, because the failure is invisible:
+        the user believes the work is done.
+
+        It now goes to the thread, which is where drafting actually happens and
+        where the reply can be read before it is written.
+      */}
+      {showDraft && item.threadId && (
+        <Link
+          href={`/app/thread/${item.threadId}`}
           className="btn btn-sm"
-          style={{ flex: 'none' }}
-          onClick={() => say(`Draft opened for ${item.fromName || item.fromEmail}`)}
+          style={{ flex: 'none', textDecoration: 'none' }}
         >
-          Draft reply
-        </button>
+          Open &amp; draft
+        </Link>
       )}
     </div>
   );

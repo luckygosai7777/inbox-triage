@@ -893,10 +893,24 @@ a .card:hover,
   padding: 10px 16px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-lift);
-  z-index: 40;
+  /* Above the account menu, and explicitly so. Both were 40, which left the
+     order decided by whichever happened to come later in the JSX — a tie that
+     flips silently the first time someone moves a block. */
+  z-index: 50;
 }
 .menu {
   position: absolute;
+  /*
+   * Above .menu-scrim (39), and this is load-bearing.
+   *
+   * The scrim is a transparent full-viewport button that closes the menu when
+   * you tap away from it. Without a z-index here, the scrim — which is
+   * positioned and has one — painted on top of the menu it was meant to sit
+   * behind. Settings, Privacy and Sign out were all covered by an invisible
+   * button, so every click closed the menu and went nowhere. Nothing looked
+   * broken; the menu simply never did anything.
+   */
+  z-index: 40;
   left: 72px;
   bottom: 16px;
   width: 240px;
