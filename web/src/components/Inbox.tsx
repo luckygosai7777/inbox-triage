@@ -147,7 +147,7 @@ export default function Inbox() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="h1">Inbox</h1>
+          <h1 className="h1 rule-sweep">Inbox</h1>
           <p className="small muted" style={{ margin: '4px 0 0' }}>
             Sorted by reply priority
           </p>
@@ -191,9 +191,11 @@ export default function Inbox() {
                     className="small mt-4"
                     style={{ color: ledger.overdue ? 'var(--danger)' : 'var(--text-tertiary)' }}
                   >
-                    {ledger.overdue
-                      ? `${ledger.overdue} already late`
-                      : 'Nothing late right now'}
+                    {ledger.overdue ? (
+                      <span className="is-overdue">{ledger.overdue} already late</span>
+                    ) : (
+                      'Nothing late right now'
+                    )}
                     {ledger.oldestDays > 7 ? ` · oldest is ${ledger.oldestDays} days old` : ''}
                   </div>
                 </div>
@@ -274,7 +276,38 @@ export default function Inbox() {
             </div>
           )}
 
-          {loading && <div className="empty muted small">Loading mail…</div>}
+          {loading && (
+            <div aria-busy="true" aria-label="Loading mail">
+              {[0, 1, 2, 3, 4, 5].map((row) => (
+                <div
+                  key={row}
+                  className="mail-row"
+                  style={{ pointerEvents: 'none', opacity: 1 - row * 0.13 }}
+                >
+                  <span className="mail-c-gutter" />
+                  <div className="mail-c-prio">
+                    <span className="prio-dot skeleton" />
+                  </div>
+                  <div className="mail-c-sender">
+                    <span className="skeleton small" style={{ width: '70%' }}>
+                      &nbsp;
+                    </span>
+                  </div>
+                  <div className="mail-c-subject">
+                    <span className="skeleton small" style={{ display: 'block', width: '85%' }}>
+                      &nbsp;
+                    </span>
+                  </div>
+                  <div className="mail-c-cat" />
+                  <div className="mail-c-time">
+                    <span className="skeleton tiny" style={{ display: 'inline-block', width: 28 }}>
+                      &nbsp;
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {!loading && !error && !data.results.length && (
             <div className="empty">
@@ -290,7 +323,7 @@ export default function Inbox() {
           )}
 
           {!loading && !error && data.results.length > 0 && (
-            <div role="table" aria-label="Messages">
+            <div className="stagger" role="table" aria-label="Messages">
               <div className="mail-head label" role="row">
                 <span className="mail-c-gutter" />
                 <div className="mail-c-prio">

@@ -3,53 +3,78 @@
    scrollbar states live here because inline styles cannot express them; the
    components use these classes and reserve inline styles for dynamic values. */
 
+/*
+ * WARM EDITORIAL
+ *
+ * The first version of this was dark, and dark was the wrong instinct for what
+ * this product is. Owed is about obligations — money, deadlines, people waiting
+ * on you. That is an accounting of your word, and it wants to read like a
+ * well-set page rather than a control panel.
+ *
+ * Three rules hold the whole thing together:
+ *
+ *   1. Paper, not white. #FAF8F4 has warmth in it; pure #FFF is clinical and
+ *      glares. Cards sit *above* the page in true white, so hierarchy comes
+ *      from a lightness difference rather than from borders everywhere.
+ *   2. One accent, used sparingly. Rust earns attention precisely because
+ *      almost nothing else is coloured.
+ *   3. Ink is never pure black. #1A1714 is warm-black; #000 on warm paper
+ *      reads as a hole punched in it.
+ */
 :root {
-  /* Backgrounds. The token table names #111114 bg-primary; the prototype paints
-     the page a shade darker and uses #111114 for the nav rail and inputs. Both
-     are kept so either reading is available. */
-  --bg-page: #0d0d0f;
-  --bg-primary: #111114;
-  --bg-secondary: #16161a;
-  --bg-tertiary: #1e1e23;
-  --bg-hover: #1b1b20;
-  --bg-stripe: #17171b;
-  --bg-chip: #202026;
+  --bg-page: #faf8f4;      /* warm paper — the page itself */
+  --bg-primary: #ffffff;   /* cards and inputs, lifted off the paper */
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f2eee7;  /* pressed, selected, raised-but-recessed */
+  --bg-hover: #f6f3ed;
+  --bg-stripe: #f5f2ec;
+  --bg-chip: #f0ebe2;
 
-  --text-primary: #f4f4f5;
-  --text-body: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-faint: #52525b;
+  --text-primary: #1a1714; /* warm black — never #000 on warm paper */
+  --text-body: #2e2a26;
+  --text-secondary: #635c54;
+  --text-tertiary: #8a8178;
+  --text-faint: #a9a096;
 
-  --border-light: #26262c;
-  --border-medium: #303038;
-  --border-strong: #3a3a44;
-  --border-input: #2c2c33;
-  --border-row: #1d1d22;
-  --border-danger: #4a2a2a;
+  --border-light: #e9e3d9;
+  --border-medium: #ddd5c8;
+  --border-strong: #c7bdac;
+  --border-input: #ddd5c8;
+  --border-row: #efeae1;
+  --border-danger: #e3c0b4;
 
-  --accent: #f0883e;
-  --accent-hover: #ff9d5c;
-  --accent-active: #d97530;
-  --accent-ink: #1a0f06;
-  --accent-wash: rgba(240, 136, 62, 0.12);
+  /* Rust. Warm enough to belong on the paper, dark enough to carry white. */
+  --accent: #b4441e;
+  --accent-hover: #9a3917;
+  --accent-active: #822f12;
+  --accent-ink: #ffffff;
+  --accent-wash: rgba(180, 68, 30, 0.07);
 
-  --danger: #f87171;
-  --danger-wash: rgba(248, 113, 113, 0.1);
-  --danger-border: #6b3535;
-  --warning: #f5c451;
-  --success: #4ade9b;
+  /* Semantics are deliberately *not* near-rust, or "late" and "brand" blur. */
+  --danger: #9f1239;       /* wine — overdue, destructive */
+  --danger-wash: rgba(159, 18, 57, 0.07);
+  --danger-border: #e3b9c5;
+  --warning: #a16207;      /* ochre */
+  --success: #15803d;      /* forest */
 
-  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-display: 'Space Grotesk', 'IBM Plex Sans', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 5px;
+  --radius: 7px;
+  --radius-lg: 11px;
   --radius-pill: 999px;
 
-  color-scheme: dark;
+  /* Shadows do the lifting that borders used to. Warm-tinted, never neutral
+     grey, or cards look like they were cut out of a different document. */
+  --shadow-sm: 0 1px 2px rgba(60, 46, 30, 0.05);
+  --shadow: 0 2px 8px rgba(60, 46, 30, 0.07), 0 1px 2px rgba(60, 46, 30, 0.04);
+  --shadow-lift: 0 8px 24px rgba(60, 46, 30, 0.1), 0 2px 6px rgba(60, 46, 30, 0.06);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  color-scheme: light;
 }
 
 * {
@@ -85,7 +110,7 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(240, 136, 62, 0.3);
+  background: rgba(180, 68, 30, 0.16);
 }
 
 ::-webkit-scrollbar {
@@ -126,9 +151,13 @@ button:disabled {
 .h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 27px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  /* Fraunces is a display serif: it wants its optical size raised and its
+     tracking left alone. The -0.02em here was tuned for a grotesk. */
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 36;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 .h2 {
@@ -145,10 +174,13 @@ button:disabled {
 }
 .metric-number {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 600;
+  font-variation-settings: 'opsz' 40;
   color: var(--text-primary);
   line-height: 1;
+  /* Tabular figures so a counting animation does not make the row jitter. */
+  font-variant-numeric: tabular-nums;
 }
 .label {
   font-size: 11px;
@@ -283,8 +315,8 @@ button:disabled {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #2a2a31;
-  border: 1px solid #35353d;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-medium);
   display: grid;
   place-items: center;
   font-size: 11px;
@@ -294,7 +326,7 @@ button:disabled {
 }
 .nav-avatar:hover {
   color: var(--text-body);
-  border-color: #4a4a55;
+  border-color: var(--border-strong);
 }
 
 .page-header {
@@ -312,6 +344,20 @@ button:disabled {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
+  /* On paper a card is a sheet on a desk, so it casts a shadow rather than
+     being drawn with a heavier outline. */
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow 0.22s var(--ease),
+    transform 0.22s var(--ease),
+    border-color 0.22s var(--ease);
+}
+/* Only cards that go somewhere respond to the pointer. */
+a .card:hover,
+.card-interactive:hover {
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
+  border-color: var(--border-medium);
 }
 .card-pad {
   padding: 16px;
@@ -375,6 +421,16 @@ button:disabled {
   justify-content: center;
   gap: 8px;
 }
+.btn {
+  transition:
+    border-color 0.18s var(--ease),
+    background 0.18s var(--ease),
+    transform 0.12s var(--ease),
+    box-shadow 0.18s var(--ease);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
 .btn:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
@@ -387,9 +443,13 @@ button:disabled {
   font-size: 14px;
   padding: 10px 18px;
 }
+.btn-primary {
+  box-shadow: var(--shadow-sm);
+}
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
   color: var(--accent-ink);
+  box-shadow: var(--shadow);
 }
 .btn-primary:active:not(:disabled) {
   background: var(--accent-active);
@@ -563,7 +623,7 @@ button:disabled {
   line-height: 1;
 }
 .checkbox:hover {
-  border-color: #52525b;
+  border-color: var(--border-strong);
 }
 .checkbox[aria-checked='true'] {
   background: var(--accent);
@@ -783,7 +843,7 @@ button:disabled {
   color: var(--accent-ink);
 }
 .step-btn[data-state='passed'] .step-num {
-  background: rgba(240, 136, 62, 0.15);
+  background: rgba(180, 68, 30, 0.1);
   color: var(--accent);
 }
 .step-sep {
@@ -821,7 +881,7 @@ button:disabled {
   font-weight: 500;
   padding: 10px 16px;
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lift);
   z-index: 40;
 }
 .menu {
@@ -832,7 +892,7 @@ button:disabled {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 48px rgba(60, 46, 30, 0.16), 0 2px 8px rgba(60, 46, 30, 0.08);
   overflow: hidden;
 }
 .menu-item {
@@ -859,7 +919,7 @@ button:disabled {
   height: 22px;
   flex: none;
   border-radius: 50%;
-  background: rgba(240, 136, 62, 0.15);
+  background: rgba(180, 68, 30, 0.1);
   border: 1px solid var(--accent);
   color: var(--accent);
   font-size: 9px;
@@ -890,7 +950,7 @@ button:disabled {
   height: 36px;
   border-radius: 50%;
   flex: none;
-  background: rgba(240, 136, 62, 0.15);
+  background: rgba(180, 68, 30, 0.1);
   border: 1px solid var(--accent);
   display: grid;
   place-items: center;
@@ -1076,9 +1136,25 @@ button:disabled {
   }
 }
 
+/*
+ * Honour the system setting, completely.
+ *
+ * This used to kill transitions only, which was half a promise: the staggered
+ * entrances, the shimmer and the overdue pulse would all still have run. For
+ * someone with vestibular sensitivity the animations are the part that
+ * actually hurts, so they go too.
+ *
+ * `animation: none` leaves every element at its natural resting state — the
+ * entrances declare their visible state as the default and only animate
+ * towards it — so switching this on removes movement without removing content.
+ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -1204,7 +1280,7 @@ button:disabled {
   letter-spacing: 0.1em;
   color: var(--accent);
   background: var(--accent-wash);
-  border: 1px solid rgba(240, 136, 62, 0.3);
+  border: 1px solid rgba(180, 68, 30, 0.28);
   padding: 5px 11px;
   border-radius: var(--radius-pill);
 }
@@ -1234,7 +1310,7 @@ button:disabled {
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(60, 46, 30, 0.14);
 }
 .dot {
   width: 9px;
@@ -1514,4 +1590,148 @@ button:disabled {
 .draft-box:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* ================================================================= motion
+ *
+ * The brief for this theme was "quiet — motion only where it means something",
+ * and that is a constraint, not a shortage of ideas. Every animation below
+ * answers a question the user is actually asking:
+ *
+ *   "did my click land?"        → press states, sweeping underlines
+ *   "is anything happening?"    → shimmer while loading, not a spinner
+ *   "what just changed?"        → new rows rise in; nothing else moves
+ *   "what is urgent?"           → overdue counts breathe, once, slowly
+ *
+ * Nothing loops forever except the one overdue pulse, because a page that
+ * never settles is a page you cannot read. Durations sit between 180-420ms:
+ * under 150ms reads as a glitch, over 500ms reads as lag.
+ *
+ * All of it is switched off by the prefers-reduced-motion block in the
+ * breakpoints section above — that rule is not decoration, it is the
+ * difference between a nice interface and one that makes some people ill.
+ */
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+/* One slow breath. Loud enough to find, quiet enough to sit next to. */
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/*
+ * Staggered entrance.
+ *
+ * The delay is capped at twelve children on purpose: past about half a second
+ * the stagger stops reading as "these arrived together" and starts reading as
+ * "this page is slow". Row thirteen onward simply appears.
+ */
+.stagger > * {
+  animation: rise-in 0.42s var(--ease) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(8) { animation-delay: 280ms; }
+.stagger > *:nth-child(9) { animation-delay: 320ms; }
+.stagger > *:nth-child(10) { animation-delay: 360ms; }
+.stagger > *:nth-child(11) { animation-delay: 400ms; }
+.stagger > *:nth-child(n + 12) { animation-delay: 440ms; }
+
+/* A whole view arriving. */
+.enter {
+  animation: fade-in 0.3s var(--ease) both;
+}
+
+/*
+ * The editorial detail: a rule under a heading that draws itself.
+ *
+ * This is the one flourish the theme gets, so it is spent on the page title —
+ * the thing the eye lands on first.
+ */
+.rule-sweep {
+  position: relative;
+  padding-bottom: 10px;
+}
+.rule-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: sweep 0.5s var(--ease) 0.1s both;
+}
+
+/* Loading. A shimmering block of the right shape beats a spinner: it tells you
+   what is coming, not merely that something is. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--radius-sm);
+  color: transparent;
+}
+
+/* Reserved for a count that is actually overdue — never for decoration. */
+.is-overdue {
+  animation: breathe 2.8s ease-in-out infinite;
+}
+
+/* Mail rows sit on the page, so they warm rather than lift. */
+.mail-row {
+  transition: background 0.16s var(--ease), padding-left 0.16s var(--ease);
+}
+.mail-row:hover {
+  /* A 3px nudge is enough to feel live without reflowing the column. */
+  padding-left: 19px;
+}
+
+.chip {
+  transition:
+    background 0.18s var(--ease),
+    border-color 0.18s var(--ease),
+    color 0.18s var(--ease);
+}
+
+/* The nav marks the current page with a rule that slides, not a block that
+   blinks on. */
+.nav-item {
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
 }

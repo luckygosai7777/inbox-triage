@@ -64,7 +64,7 @@ export default function Settings() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="h1">Settings</h1>
+          <h1 className="h1 rule-sweep">Settings</h1>
           <p className="small muted" style={{ margin: '4px 0 0' }}>
             Your account, your data, and how to take it back
           </p>

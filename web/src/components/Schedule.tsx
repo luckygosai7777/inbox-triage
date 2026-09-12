@@ -72,7 +72,7 @@ export default function Schedule() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="h1">Schedule</h1>
+          <h1 className="h1 rule-sweep">Schedule</h1>
           <p className="small muted" style={{ margin: '4px 0 0' }}>
             Replies packed into the gaps between today’s meetings
           </p>

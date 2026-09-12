@@ -136,7 +136,7 @@ export default function Ledger() {
     <>
       <header className="page-header">
         <div>
-          <h1 className="h1">What you owe</h1>
+          <h1 className="h1 rule-sweep">What you owe</h1>
           <p className="small muted" style={{ margin: '4px 0 0' }}>
             Read out of your email, so you don’t have to keep a list yourself
           </p>
