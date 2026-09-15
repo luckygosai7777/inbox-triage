@@ -1,7 +1,7 @@
 # Owed — project context
 
 Paste this into any AI assistant to bring it up to speed on the project.
-Last updated: 2026-09-10 (deployed and syncing real mail)
+Last updated: 2026-09-15 (sending, composing, and themed)
 
 ---
 
@@ -43,14 +43,25 @@ opening) and a security property (a hostile email cannot fabricate urgency).
 - **Inbox** — mail triaged by reply priority, searchable by sender/address/topic
 - **Schedule** — replies packed into the real gaps between calendar meetings,
   deadline-first, with per-sender effort estimates
-- **Thread reader** — read a thread, reply via a Gmail compose link
+- **Thread reader** — read a thread and reply in place. The composer does
+  To/Cc/Bcc, subject, attachments (3 MB/file, 3.5 MB total — Vercel caps a
+  request body at 4.5 MB and base64 inflates by a third), and sends through the
+  user's own account. Writing by hand is the default; "✦ Draft it in my voice"
+  is a button beside it and appends rather than overwrites.
 - **Settings** — connection status, JSON export, account deletion
 
 ### Hard product constraint
 
-**The app cannot send email.** No send API access anywhere. Replies open a
-prefilled Gmail compose tab and the user presses Send themselves. This is
-deliberate, not a missing feature.
+**Nothing sends itself.** The app *can* send — you write or generate a reply,
+read it, and press Send, and it leaves from your own Gmail account in the right
+thread. What does not exist is any path that reaches your contacts without you:
+no scheduled send, no auto-reply, no automation into the send route.
+
+This changed on 2026-09-15. It was previously "cannot send at all", with
+replies opening a prefilled Gmail tab. That made the product a viewer of your
+mail rather than a place to work in it, and the drafted reply — the whole point
+— had to be copied elsewhere to be useful. No new Google permission was needed:
+`gmail.modify`, already held for archiving, authorises `users.messages.send`.
 
 ---
 
@@ -62,10 +73,10 @@ deliberate, not a missing feature.
 | Hosting | Vercel (region `sin1` — Singapore, next to the database) |
 | Database | Supabase Postgres, region `ap-southeast-1` |
 | Auth | Supabase Auth, Google OAuth provider |
-| LLM | Anthropic Claude (`claude-opus-5`; `ANTHROPIC_MODEL_FAST` can route the high-volume classifier to a cheaper model) |
+| LLM | Anthropic Claude, or Google Gemini on its free tier. `AI_PROVIDER=auto` prefers Anthropic when its key is present. The Gemini model is **discovered at runtime** from the catalogue the key can see — never hardcoded. |
 | Email APIs | `googleapis` (Gmail + Calendar) |
 | Validation | Zod on every API route |
-| Tests | Vitest — 113 tests, none touch the network |
+| Tests | Vitest — 201 tests, none touch the network |
 | Transactional email | Resend (optional; digests skip if unconfigured) |
 
 ### Repo layout
@@ -107,8 +118,8 @@ web/                       ← the app. Vercel Root Directory must be set to thi
 Public   /  /pricing  /privacy  /terms  /login
 App      /app  /app/ledger  /app/schedule  /app/settings  /app/thread/[id]
 API      /api/mail  /api/commitments  /api/schedule  /api/sync
-         /api/thread/[id]  /api/account  /api/export
-         /api/cron/sync  /api/cron/digest
+         /api/thread/[id]  /api/draft  /api/send  /api/health
+         /api/account  /api/export  /api/cron/sync  /api/cron/digest
 ```
 
 ---
@@ -171,15 +182,28 @@ every morning saying "you're all clear" teaches people to filter it.
 
 | Plan | Price | Limit |
 |---|---|---|
-| Free | ₹0 | 25 messages/sync, manual sync |
-| Pro | ₹99/month | 200 messages/sync, daily auto-sync, digest |
-| Team | ₹399/seat/month | shared ledger, audit log |
+| Free | ₹0 | rules-engine sorting, 50/sync by hand, 10 drafts/month |
+| Pro | ₹499/month | model sorting, 100/sync, 60 drafts, auto-sync, digest |
+| Studio | ₹1,299/month | 300/sync, 300 drafts, bulk drafting, hourly sync |
 
 ### Unit economics — the constraint behind those limits
 
-Cost is dominated by Anthropic tokens, not hosting. One active user (~30 new
-messages/day, daily sync) costs roughly **$5.30/month with every call on Opus**.
-₹99 is about **$1.20**.
+Cost is dominated by model tokens, not hosting. Per operation, at list price
+and ₹88/$:
+
+| | cost |
+|---|---|
+| sort one message | ₹0.055 |
+| mine one for the ledger | ₹0.26 |
+| write one draft (Sonnet 5) | ₹0.78 |
+
+Pro runs about **₹290/user/month** of variable cost against ₹499 of revenue.
+
+**The fixed cost that is easy to miss:** Vercel Hobby forbids commercial use, so
+the day this takes a rupee it needs Vercel Pro at $20/month. With Supabase that
+is ~₹1,850/month standing from the first paying customer. At ₹499 each Pro user
+contributes ~₹197 after Razorpay, so fixed costs clear at **eleven paying
+users**.
 
 Levers, in order of impact:
 - `ANTHROPIC_MODEL_FAST=claude-haiku-4-5` — routes classification (high volume,
@@ -188,7 +212,7 @@ Levers, in order of impact:
 - Per-sync message caps — the ceiling on what one user can cost per day.
 - Daily rather than hourly sync.
 
-Also budget ~5% for Razorpay on a ₹99 charge, and 18% GST if registered.
+Also budget ~2.4% for Razorpay, and 18% GST if registered.
 
 ---
 
@@ -211,7 +235,8 @@ All security controls. Database schema with RLS on 13 tables.
 | `TOKEN_ENCRYPTION_KEY` | set — **43 chars, do not "fix" it** (see below) |
 | `GOOGLE_CLIENT_ID` | set |
 | `GOOGLE_CLIENT_SECRET` | set |
-| `ANTHROPIC_API_KEY` | **not set** — sync falls back to regex heuristics |
+| `ANTHROPIC_API_KEY` | not set — Gemini answers instead |
+| `GEMINI_API_KEY` | set — the free-tier provider |
 | `CRON_SECRET` | **not set** — background sync and digests do not run |
 | `APP_URL` | not set — falls back to VERCEL_PROJECT_PRODUCTION_URL, fine |
 
@@ -255,6 +280,30 @@ returns a value. Check it first when something looks misconfigured.
 Also: **a git push does not always trigger a Vercel build.** If the site does
 not change, check Deployments — if the top entry is not your commit, it never
 ran. An empty commit re-fires it.
+
+## Recent decisions worth not re-litigating
+
+- **Categories are earned, not assigned by elimination.** `Clients` used to be
+  the catch-all, so a Google security alert was filed as a client. A person
+  -category now requires a human sender (decided from headers: Auto-Submitted,
+  X-Auto-Response-Suppress, Feedback-ID, Precedence), and Clients specifically
+  requires a work signal or an ask. `Other` carries the residue.
+- **An ask is not always a question.** "Send me the file" has no question mark
+  and is a stronger demand than "could you send the file?". Imperatives count,
+  in the classifier and the Ledger. The Ledger excludes sentences where the
+  *sender* is promising, or "I'll send the deck" lands as something they wanted
+  from you.
+- **First contact counts.** Requiring prior correspondence before calling
+  someone a client buried the most valuable mail a freelancer gets.
+- **"Make it human" is not in the drafting prompt**, deliberately. It is
+  unfalsifiable — the model cannot check output against it — and produces a
+  performance of informality. `lib/voice.ts` measures the user's own sent mail
+  instead (greeting, sign-off, sentence length, contractions, em-dashes) and
+  the prompt gets facts. Stock phrases are matched *after* generation, and any
+  URL the model invented is stripped.
+- **The Gemini model is never hardcoded.** It is discovered from the catalogue
+  the key can see and cached; a 404 re-resolves once. A hardcoded id is a guess
+  about a remote list that rots, and the user cannot correct it.
 
 ## Conventions worth knowing
 
