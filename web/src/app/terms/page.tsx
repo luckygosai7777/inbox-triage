@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
+import { legalDetails } from '@/lib/legal';
 
 export const metadata: Metadata = {
   title: 'Terms of Service — Owed',
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
  * it before you take payment or operate in a regulated market.
  */
 export default function TermsPage() {
+  const legal = legalDetails();
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
       <MarketingNav />
@@ -140,16 +142,27 @@ export default function TermsPage() {
 
           <h2>13. Governing law</h2>
           <p>
-            {/* TODO: set your jurisdiction */}
-            <strong>TODO: insert governing jurisdiction</strong> — for example &ldquo;These terms are
-            governed by the laws of England and Wales, and disputes are subject to the exclusive
-            jurisdiction of its courts.&rdquo;
+            {legal.jurisdiction ? (
+              <>
+                These terms are governed by the laws of <strong>{legal.jurisdiction}</strong>, and
+                disputes are subject to the exclusive jurisdiction of its courts.
+              </>
+            ) : (
+              <>
+                A governing jurisdiction will be stated here before this service accepts payment.
+                Until then it is offered free and without warranty, and nothing on this page is
+                intended to displace rights you hold under your own local law.
+              </>
+            )}
           </p>
 
           <h2>14. Contact</h2>
           <p>
-            <a href="mailto:legal@example.com">legal@example.com</a>{' '}
-            <strong>(TODO: replace)</strong>
+            {legal.legalEmail ? (
+              <a href={`mailto:${legal.legalEmail}`}>{legal.legalEmail}</a>
+            ) : (
+              <>A contact address will be published before this service accepts payment.</>
+            )}
           </p>
 
           <p style={{ marginTop: 40 }}>

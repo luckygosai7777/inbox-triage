@@ -188,6 +188,25 @@ checkout rather than after.
 
 Also budget 18% GST if you are registered.
 
+### Before you take money
+
+Four values are named in the privacy policy and terms. Until they are set, both
+pages say so in plain language rather than showing a placeholder — honest for a
+pre-launch service, and better than a fake address, but not something to launch
+on.
+
+| Variable | Example |
+|---|---|
+| `LEGAL_ENTITY_NAME` | `Owed Technologies` |
+| `LEGAL_ADDRESS` | `Mumbai, Maharashtra, India` |
+| `LEGAL_JURISDICTION` | `India` |
+| `CONTACT_EMAIL` | the address that answers privacy, legal and security mail |
+
+They are read straight from `process.env` rather than through the validated
+`env()`, so a broken database secret cannot stop a privacy policy rendering.
+That is not a detail: a backend outage is exactly when someone goes looking for
+a way to contact you.
+
 ## Background jobs
 
 The product only works if it runs without you. Two Vercel Crons, declared in

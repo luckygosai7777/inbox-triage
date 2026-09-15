@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
+import { legalDetails } from '@/lib/legal';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy — Owed',
@@ -16,9 +17,10 @@ export const metadata: Metadata = {
  * The Limited Use section below is not optional wording — Google's reviewers
  * look for an affirmative statement that the app's use of data from Google APIs
  * adheres to the Limited Use requirements. Read this before publishing and
- * replace the placeholders marked TODO with your real entity details.
+ * entity details come from lib/legal.ts, which reads them from the environment.
  */
 export default function PrivacyPage() {
+  const legal = legalDetails();
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
       <MarketingNav />
@@ -40,11 +42,23 @@ export default function PrivacyPage() {
           <h2>1. Who we are</h2>
           <p>
             Owed (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides an email triage and
-            commitment-tracking service. {/* TODO: replace with your legal entity and address */}
-            <strong> TODO: add your legal entity name, registered address and contact email</strong>{' '}
-            before publishing. Questions:{' '}
-            <a href="mailto:privacy@example.com">privacy@example.com</a>{' '}
-            <strong>(TODO: replace)</strong>.
+            commitment-tracking service.{' '}
+            {legal.entity ? (
+              <>
+                It is operated by <strong>{legal.entity}</strong>
+                {legal.address ? <>, {legal.address}</> : null}.
+              </>
+            ) : (
+              <>The operating entity is not yet registered; this is a pre-launch service.</>
+            )}{' '}
+            {legal.privacyEmail ? (
+              <>
+                Questions about this policy or your data:{' '}
+                <a href={`mailto:${legal.privacyEmail}`}>{legal.privacyEmail}</a>.
+              </>
+            ) : (
+              <>A contact address will be published before this service accepts payment.</>
+            )}
           </p>
 
           <h2>2. What we access</h2>
@@ -158,8 +172,12 @@ export default function PrivacyPage() {
           </ul>
           <p>
             No system is perfectly secure. If you discover a vulnerability, please report it to{' '}
-            <a href="mailto:security@example.com">security@example.com</a>{' '}
-            <strong>(TODO: replace)</strong> and we will respond promptly.
+            {legal.securityEmail ? (
+              <a href={`mailto:${legal.securityEmail}`}>{legal.securityEmail}</a>
+            ) : (
+              <>the address published on this site</>
+            )}{' '}
+            and we will respond promptly.
           </p>
 
           <h2>8. Retention</h2>

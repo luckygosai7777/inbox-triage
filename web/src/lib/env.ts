@@ -70,6 +70,11 @@ const schema = z.object({
     .default('false')
     .transform((v) => v.toLowerCase() === 'true'),
   APP_URL: z.string().url().default('http://localhost:3000'),
+
+  // LEGAL_ENTITY_NAME, LEGAL_ADDRESS, LEGAL_JURISDICTION and CONTACT_EMAIL are
+  // deliberately NOT here. They are read straight from process.env in
+  // lib/legal.ts, so that the privacy policy and terms never depend on this
+  // schema validating — a public page must render when the backend does not.
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   // --- Tuning -------------------------------------------------------------
