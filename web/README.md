@@ -142,32 +142,51 @@ The dominant cost per user is Anthropic tokens, not hosting. A sync makes three
 kinds of call: classification (batched, 10 messages each), commitment extraction
 (one per message mined), and VIP briefs.
 
-Rough steady-state cost for one active user, ~30 new messages a day, syncing
-daily:
+Cost is dominated by model tokens, not hosting. Per operation, at list price
+and ₹88 to the dollar:
 
-| Route | Calls/day | Model | Cost/month |
+| Operation | Tokens | Cost |
+|---|---|---|
+| Sort one message | ~320 in / 60 out (batched 10) | ₹0.055 |
+| Mine one message for the ledger | ~1,800 in / 250 out | ₹0.26 |
+| Write one draft | ~2,900 in / 300 out, Sonnet 5 | ₹0.78 |
+
+Which gives, per month:
+
+| Plan | Volume | Variable cost | Price |
 |---|---|---|---|
-| Classification | ~3 batches | `ANTHROPIC_MODEL_FAST` | ~$2.00 on Opus, ~$0.40 on Haiku |
-| Commitment extraction | ~8 | `ANTHROPIC_MODEL` | ~$2.40 |
-| VIP briefs | ~3 | `ANTHROPIC_MODEL` | ~$0.90 |
-| **Total** | | | **~$5.30 on Opus throughout** |
+| Pro | 3,000 sorted, 300 mined, 60 drafts | ~₹290 | ₹499 |
+| Studio | 9,000 sorted, 900 mined, 300 drafts | ~₹920 | ₹1,299 |
 
-**₹99 is about $1.20.** On Opus everywhere, one Pro user costs roughly 4× what
-they pay. The plan limits and the two-model split exist to close that gap:
+### The fixed cost that is easy to miss
 
-- Set `ANTHROPIC_MODEL_FAST=claude-haiku-4-5`. Classification is the high-volume,
-  low-ambiguity route and this is where the volume is. Commitment extraction
-  stays on the better model, because a wrong answer there becomes a wrong row in
-  someone's ledger — which is the whole product.
-- Keep the per-sync message caps (25 free, 200 Pro). They are the ceiling on
-  what a single user can cost you in a day.
-- Sync daily, not hourly. Hourly multiplies the bill by 24 for very little gain.
+**Vercel Hobby forbids commercial use.** The day this takes a rupee it needs
+Vercel Pro at $20/month. With Supabase beyond its free tier that is roughly
+**₹1,850/month standing, from the first paying customer.**
 
-Even then Pro is thin. Treat ₹99 as a launch price that buys users, and watch
-actual per-user token spend in the Anthropic console before scaling it.
+At ₹499, with ~₹290 of variable cost and ~2.4% to Razorpay, each Pro user
+contributes about ₹197. Fixed costs are covered at **eleven paying users**.
+Below that the project runs at a loss — worth knowing before building a
+checkout rather than after.
 
-Also budget for: Razorpay taking ~2% + ₹3 per transaction (≈5% of a ₹99 charge),
-and 18% GST if you are registered.
+### Levers, in order of effect
+
+- **Run the free plan on rules, not the model.** Free sorting uses the
+  heuristics in `lib/llm.ts` and `lib/parsing.ts`, which are good enough to be
+  the product's floor and cost nothing. Free costs about ₹8/user/month, all of
+  it the ten sample drafts.
+- **`ANTHROPIC_MODEL_FAST=claude-haiku-4-5`.** Classification is the
+  high-volume, low-ambiguity route and where the volume is. Commitment
+  extraction stays on the better model: a wrong answer there is a wrong row in
+  someone's ledger, which is the whole product.
+- **Or run on Gemini's free tier entirely.** `GEMINI_API_KEY` costs nothing.
+  Read the privacy note first — Google may use free-tier content for product
+  improvement, and the content here is other people's email.
+- **Keep the per-sync caps.** They are the ceiling on what one user can cost in
+  a day.
+- **Sync daily, not hourly.** Hourly multiplies the bill by 24 for little gain.
+
+Also budget 18% GST if you are registered.
 
 ## Background jobs
 
