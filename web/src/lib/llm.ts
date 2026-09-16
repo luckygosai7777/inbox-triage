@@ -181,6 +181,8 @@ export function geminiSchema(schema: any): any {
  * degrade, not break.
  */
 let resolvedModel: string | null = null;
+/** Every usable model, best first. Kept so a busy one can step aside. */
+let rankedModels: string[] = [];
 
 /**
  * How much we want a given model for this workload, higher is better.
@@ -254,10 +256,25 @@ async function geminiModel(force = false): Promise<string> {
     );
   }
 
-  resolvedModel = ranked[0].id;
+  rankedModels = ranked.map((m) => m.id);
+  resolvedModel = rankedModels[0];
   console.warn(`[gemini] using ${resolvedModel} (chose from ${ranked.length} candidates)`);
   return resolvedModel;
 }
+
+/** The alternatives, best first, excluding one that has just let us down. */
+async function geminiAlternatives(exclude: string): Promise<string[]> {
+  if (!rankedModels.length) {
+    try {
+      await geminiModel(true);
+    } catch {
+      return [];
+    }
+  }
+  return rankedModels.filter((id) => id !== exclude);
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Diagnostics for /api/health — never called on a request path. */
 export async function geminiModelReport(): Promise<{
@@ -281,6 +298,10 @@ async function geminiRequest<T>(
   maxTokens: number,
   /** Set once we have already re-resolved the model, to stop a retry loop. */
   rediscovered = false,
+  /** Backoff attempt against the current model. */
+  attempt = 0,
+  /** Models already tried and found busy, so we never loop back to one. */
+  tried: string[] = [],
 ): Promise<T> {
   const config = env();
   const chosen = await geminiModel(rediscovered);
@@ -338,9 +359,42 @@ async function geminiRequest<T>(
     if (response.status === 404) {
       throw new LLMUnavailable(`gemini served no usable model (tried "${chosen}")`);
     }
-    if (response.status === 429) {
-      throw new LLMUnavailable('gemini free-tier rate limit reached');
+
+    /*
+     * 503 and 429 are not failures, they are "not right now".
+     *
+     * Gemini's free tier returns 503 UNAVAILABLE whenever the model is busy,
+     * which on a popular model is often. Treating that as a hard error made a
+     * five-second wait look like a broken feature — and it wasted the ranked
+     * catalogue sitting in memory, every entry of which is another model that
+     * could have answered.
+     *
+     * So: back off and retry the same model, and if it is still busy, walk
+     * down the ranking. Capacity is per-model, so the second choice is usually
+     * free precisely when the first is not.
+     */
+    if (response.status === 503 || response.status === 429 || response.status >= 500) {
+      if (attempt < 2) {
+        const wait = 400 * 2 ** attempt; // 400ms, then 800ms
+        console.warn(`[gemini] ${response.status} on ${chosen} — retrying in ${wait}ms`);
+        await sleep(wait);
+        return geminiRequest<T>(system, user, schema, maxTokens, rediscovered, attempt + 1, tried);
+      }
+
+      const next = (await geminiAlternatives(chosen)).find((id) => !tried.includes(id));
+      if (next) {
+        console.warn(`[gemini] ${chosen} stayed busy — falling back to ${next}`);
+        resolvedModel = next;
+        return geminiRequest<T>(system, user, schema, maxTokens, true, 0, [...tried, chosen]);
+      }
+
+      throw new LLMUnavailable(
+        response.status === 429
+          ? 'Gemini is rate limiting this key. Wait a minute and try again.'
+          : `Gemini is overloaded right now — every model this key can use is busy (tried ${[...tried, chosen].length}). This is the free tier being popular, not a problem with your setup. Try again in a moment.`,
+      );
     }
+
     throw new LLMUnavailable(`gemini call failed: ${response.status}`);
   }
 
@@ -1021,4 +1075,108 @@ export async function draftReply(input: DraftInput): Promise<Draft> {
     gaps: (result.gaps ?? []).map((gap) => String(gap).slice(0, 200)).slice(0, 8),
     tells,
   };
+}
+
+// ------------------------------------------------------------- diagnostics
+
+/**
+ * Walk the provider chain and report what each step found.
+ *
+ * Used only by /api/diagnostics/ai. Deliberately sends a fixed, meaningless
+ * sentence rather than any of the user's mail, and returns no key material.
+ */
+export async function probeProvider(): Promise<{
+  steps: Array<{ name: string; status: 'ok' | 'failed' | 'skipped'; detail: string }>;
+}> {
+  const steps: Array<{ name: string; status: 'ok' | 'failed' | 'skipped'; detail: string }> = [];
+  const provider = activeProvider();
+
+  if (provider === 'anthropic') {
+    try {
+      const answer = await request<{ ok: boolean }>({
+        system: 'Reply with {"ok": true} and nothing else.',
+        user: 'ping',
+        schema: {
+          type: 'object',
+          properties: { ok: { type: 'boolean' } },
+          required: ['ok'],
+        },
+        effort: 'low',
+        maxTokens: 64,
+        tier: 'fast',
+      });
+      steps.push({
+        name: 'The model answers',
+        status: answer?.ok === undefined ? 'failed' : 'ok',
+        detail: `${modelFor('fast')} replied.`,
+      });
+    } catch (error) {
+      steps.push({
+        name: 'The model answers',
+        status: 'failed',
+        detail: (error as Error).message,
+      });
+    }
+    return { steps };
+  }
+
+  // --- Gemini ---------------------------------------------------------------
+  let catalogue: string[] = [];
+  try {
+    catalogue = await listGeminiModels();
+    steps.push({
+      name: 'The model catalogue is readable',
+      status: 'ok',
+      detail: `Google listed ${catalogue.length} models this key can use for text.`,
+    });
+  } catch (error) {
+    steps.push({
+      name: 'The model catalogue is readable',
+      status: 'failed',
+      detail: (error as Error).message,
+    });
+    steps.push(
+      { name: 'A model can be chosen', status: 'skipped', detail: 'No catalogue to choose from.' },
+      { name: 'The model answers', status: 'skipped', detail: 'No model chosen.' },
+    );
+    return { steps };
+  }
+
+  let chosen: string;
+  try {
+    chosen = await geminiModel(true);
+    const pinned = env().GEMINI_MODEL;
+    steps.push({
+      name: 'A model can be chosen',
+      status: 'ok',
+      detail: pinned
+        ? `Chose ${chosen}. Note GEMINI_MODEL is pinned to "${pinned}" — remove it to always use the best available.`
+        : `Chose ${chosen} from ${catalogue.length} candidates.`,
+    });
+  } catch (error) {
+    steps.push({ name: 'A model can be chosen', status: 'failed', detail: (error as Error).message });
+    steps.push({ name: 'The model answers', status: 'skipped', detail: 'No model chosen.' });
+    return { steps };
+  }
+
+  try {
+    const answer = await geminiRequest<{ ok: boolean }>(
+      'Reply with {"ok": true} and nothing else.',
+      'ping',
+      { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] },
+      64,
+    );
+    steps.push({
+      name: 'The model answers',
+      status: answer?.ok === undefined ? 'failed' : 'ok',
+      detail:
+        answer?.ok === undefined
+          ? 'It replied, but not in the shape asked for. Structured output may not be supported on this model.'
+          : `${chosen} replied correctly to a test request.`,
+    });
+  } catch (error) {
+    steps.push({ name: 'The model answers', status: 'failed', detail: (error as Error).message });
+  }
+
+  return { steps };
 }

@@ -21,6 +21,20 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<any>(null);
+  const [checking, setChecking] = useState(false);
+
+  const runDiagnostics = async () => {
+    setChecking(true);
+    try {
+      const response = await fetch('/api/diagnostics/ai', { credentials: 'include' });
+      setDiagnostics(await response.json());
+    } catch (caught) {
+      say((caught as Error).message);
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +101,58 @@ export default function Settings() {
                 </p>
               </div>
             )}
+
+            {/*
+              * Drafting has four moving parts on a server the user cannot see,
+              * and "it doesn't work" cost several rounds of guessing before
+              * this existed. It walks the chain and names the step that broke.
+              */}
+            <div className="card card-pad">
+              <div className="row wrap gap-12" style={{ justifyContent: 'space-between' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="h3">Drafting</div>
+                  <div className="small muted mt-4">
+                    Checks the whole chain — key, model catalogue, and a live test request.
+                  </div>
+                </div>
+                <button type="button" className="btn btn-sm" onClick={runDiagnostics} disabled={checking}>
+                  {checking ? 'Checking…' : 'Check setup'}
+                </button>
+              </div>
+
+              {diagnostics && (
+                <div className="stack gap-8 mt-16">
+                  {diagnostics.steps.map((step: any) => (
+                    <div key={step.name} className="row gap-8" style={{ alignItems: 'flex-start' }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          flex: 'none',
+                          marginTop: 2,
+                          fontWeight: 700,
+                          color:
+                            step.status === 'ok'
+                              ? 'var(--success)'
+                              : step.status === 'failed'
+                                ? 'var(--danger)'
+                                : 'var(--text-faint)',
+                        }}
+                      >
+                        {step.status === 'ok' ? '✓' : step.status === 'failed' ? '✕' : '–'}
+                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="small" style={{ fontWeight: 600 }}>
+                          {step.name}
+                        </div>
+                        <div className="tiny muted" style={{ lineHeight: 1.6 }}>
+                          {step.detail}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* --- connection --- */}
             <div className="card card-pad">
