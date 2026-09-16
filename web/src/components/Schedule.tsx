@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
+import { apiFetch } from '@/lib/http';
+
 
 type Item = {
   id: string;
@@ -53,11 +55,11 @@ export default function Schedule() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/schedule?block_minutes=${blockMinutes}`, {
+      const response = await apiFetch(`/api/schedule?block_minutes=${blockMinutes}`, {
         credentials: 'include',
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Could not build the plan');
+      if (!response.ok) throw new Error(response.error || 'Could not build the plan');
+      const body = response.data;
       setData(body);
     } catch (caught) {
       setError((caught as Error).message);

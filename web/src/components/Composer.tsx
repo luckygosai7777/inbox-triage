@@ -23,6 +23,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useToast } from './Shell';
 
+import { apiFetch } from '@/lib/http';
+
 type Props = {
   threadId: string;
   /** Who the reply goes to, prefilled. */
@@ -135,14 +137,14 @@ export default function Composer({ threadId, to, subject, canDraft = true, onSen
     setDrafting(true);
     setError(null);
     try {
-      const response = await fetch('/api/draft', {
+      const response = await apiFetch('/api/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ thread_id: threadId }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? 'Could not write a draft');
+      if (!response.ok) throw new Error(response.error || 'Could not write a draft');
+      const data = response.data;
 
       // Never overwrite words the user has already typed.
       setBody((current) => (current.trim() ? `${current.trim()}\n\n${data.draft}` : data.draft));
@@ -163,7 +165,7 @@ export default function Composer({ threadId, to, subject, canDraft = true, onSen
     setSending(true);
     setError(null);
     try {
-      const response = await fetch('/api/send', {
+      const response = await apiFetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -181,8 +183,8 @@ export default function Composer({ threadId, to, subject, canDraft = true, onSen
           })),
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? 'Could not send');
+      if (!response.ok) throw new Error(response.error || 'Could not send');
+      const data = response.data;
 
       say(`Sent to ${data.to.join(', ')}`);
       setBody('');

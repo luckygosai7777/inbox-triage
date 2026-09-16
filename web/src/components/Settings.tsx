@@ -6,6 +6,8 @@ import Link from 'next/link';
 
 import { useToast } from './Shell';
 
+import { apiFetch } from '@/lib/http';
+
 type Account = {
   email: string;
   googleConnected: boolean;
@@ -27,8 +29,14 @@ export default function Settings() {
   const runDiagnostics = async () => {
     setChecking(true);
     try {
-      const response = await fetch('/api/diagnostics/ai', { credentials: 'include' });
-      setDiagnostics(await response.json());
+      const response = await apiFetch('/api/diagnostics/ai');
+      // A diagnostic that cannot report its own failure is worthless, so a
+      // non-JSON answer becomes a failed step rather than a thrown error.
+      setDiagnostics(
+        response.ok
+          ? response.data
+          : { ok: false, steps: [{ name: 'The check itself ran', status: 'failed', detail: response.error }] },
+      );
     } catch (caught) {
       say((caught as Error).message);
     } finally {
@@ -39,9 +47,9 @@ export default function Settings() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/account', { credentials: 'include' });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Could not load your account');
+      const response = await apiFetch('/api/account');
+      if (!response.ok) throw new Error(response.error || 'Could not load your account');
+      const body = response.data;
       setAccount(body);
     } catch (caught) {
       say((caught as Error).message);
@@ -58,14 +66,14 @@ export default function Settings() {
     if (confirm !== 'DELETE') return;
     setDeleting(true);
     try {
-      const response = await fetch('/api/account', {
+      const response = await apiFetch('/api/account', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ confirm: 'DELETE' }),
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Delete failed');
+      if (!response.ok) throw new Error(response.error || 'Delete failed');
+      const body = response.data;
       say('Account deleted');
       router.push('/');
     } catch (caught) {

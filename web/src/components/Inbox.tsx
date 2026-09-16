@@ -7,6 +7,8 @@ import CountUp from './CountUp';
 
 import { useToast } from './Shell';
 
+import { apiFetch } from '@/lib/http';
+
 type Row = {
   id: string;
   fromName: string;
@@ -83,13 +85,14 @@ export default function Inbox() {
     try {
       const params = new URLSearchParams({ filter, search: debounced });
       const [mailRes, ledgerRes] = await Promise.all([
-        fetch(`/api/mail?${params}`, { credentials: 'include' }),
-        fetch('/api/commitments?limit=1', { credentials: 'include' }),
+        apiFetch(`/api/mail?${params}`),
+        apiFetch('/api/commitments?limit=1'),
       ]);
-      const mail = await mailRes.json();
-      if (!mailRes.ok) throw new Error(mail.error ?? 'Could not load mail');
-      setData(mail);
-      if (ledgerRes.ok) setLedger((await ledgerRes.json()).summary);
+      if (!mailRes.ok) throw new Error(mailRes.error || 'Could not load mail');
+      setData(mailRes.data);
+      // The ledger banner is a bonus on this page; its failure must not take
+      // the inbox down with it.
+      if (ledgerRes.ok) setLedger(ledgerRes.data.summary);
     } catch (caught) {
       setError((caught as Error).message);
     } finally {
@@ -121,14 +124,14 @@ export default function Inbox() {
   const sync = async () => {
     setSyncing(true);
     try {
-      const response = await fetch('/api/sync', {
+      const response = await apiFetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({}),
       });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Sync failed');
+      if (!response.ok) throw new Error(response.error || 'Sync failed');
+      const body = response.data;
       say(
         `Synced ${body.fetched} messages · ${body.classified} classified · ${body.commitments} commitments found`,
       );

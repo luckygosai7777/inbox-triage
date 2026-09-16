@@ -276,6 +276,23 @@ async function geminiAlternatives(exclude: string): Promise<string[]> {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/*
+ * How long the whole provider chain may take, and how many models it may try.
+ *
+ * The retry-and-fall-back logic was added without either, which was worse than
+ * the bug it fixed. Under broad overload it walked every model the key exposes,
+ * three attempts and 1.2s of sleeping each, sailed past the 60s function limit,
+ * and the platform killed it — so a fast, accurate "503, try again" became a
+ * timeout whose response body was an HTML error page. The client then tried to
+ * parse that as JSON, and the user saw `Unexpected token 'A'`.
+ *
+ * Twenty seconds and three models. Beyond that, whatever is wrong is not going
+ * to be fixed by asking a fourth time, and the caller is owed an answer it can
+ * act on rather than a hung request.
+ */
+const PROVIDER_BUDGET_MS = 20_000;
+const MAX_MODELS_TRIED = 3;
+
 /** Diagnostics for /api/health — never called on a request path. */
 export async function geminiModelReport(): Promise<{
   chosen: string | null;
@@ -302,6 +319,8 @@ async function geminiRequest<T>(
   attempt = 0,
   /** Models already tried and found busy, so we never loop back to one. */
   tried: string[] = [],
+  /** Wall-clock deadline for the whole chain, set on the first call. */
+  deadline = Date.now() + PROVIDER_BUDGET_MS,
 ): Promise<T> {
   const config = env();
   const chosen = await geminiModel(rediscovered);
@@ -374,18 +393,27 @@ async function geminiRequest<T>(
      * free precisely when the first is not.
      */
     if (response.status === 503 || response.status === 429 || response.status >= 500) {
-      if (attempt < 2) {
+      const outOfTime = Date.now() > deadline;
+      const outOfModels = tried.length + 1 >= MAX_MODELS_TRIED;
+
+      if (!outOfTime && attempt < 2) {
         const wait = 400 * 2 ** attempt; // 400ms, then 800ms
         console.warn(`[gemini] ${response.status} on ${chosen} — retrying in ${wait}ms`);
         await sleep(wait);
-        return geminiRequest<T>(system, user, schema, maxTokens, rediscovered, attempt + 1, tried);
+        return geminiRequest<T>(
+          system, user, schema, maxTokens, rediscovered, attempt + 1, tried, deadline,
+        );
       }
 
-      const next = (await geminiAlternatives(chosen)).find((id) => !tried.includes(id));
+      const next = outOfTime || outOfModels
+        ? undefined
+        : (await geminiAlternatives(chosen)).find((id) => !tried.includes(id));
       if (next) {
         console.warn(`[gemini] ${chosen} stayed busy — falling back to ${next}`);
         resolvedModel = next;
-        return geminiRequest<T>(system, user, schema, maxTokens, true, 0, [...tried, chosen]);
+        return geminiRequest<T>(
+          system, user, schema, maxTokens, true, 0, [...tried, chosen], deadline,
+        );
       }
 
       throw new LLMUnavailable(

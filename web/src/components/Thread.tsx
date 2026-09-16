@@ -5,6 +5,8 @@ import Link from 'next/link';
 
 import Composer from './Composer';
 
+import { apiFetch } from '@/lib/http';
+
 type Message = {
   id: string;
   fromName: string;
@@ -36,9 +38,9 @@ export default function Thread({ threadId }: { threadId: string }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/thread/${threadId}`, { credentials: 'include' });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Could not load this thread');
+      const response = await apiFetch(`/api/thread/${threadId}`, { credentials: 'include' });
+      if (!response.ok) throw new Error(response.error || 'Could not load this thread');
+      const body = response.data;
       setData(body);
     } catch (caught) {
       setError((caught as Error).message);

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useToast } from './Shell';
 
+import { apiFetch } from '@/lib/http';
+
 /**
  * The Ledger — one list of everything you owe someone.
  *
@@ -88,9 +90,9 @@ export default function Ledger() {
     setError(null);
     try {
       const params = new URLSearchParams({ direction, status: showDone ? 'all' : 'open' });
-      const response = await fetch(`/api/commitments?${params}`, { credentials: 'include' });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error ?? 'Could not load your list');
+      const response = await apiFetch(`/api/commitments?${params}`, { credentials: 'include' });
+      if (!response.ok) throw new Error(response.error || 'Could not load your list');
+      const body = response.data;
       setRows(body.results);
       setSummary(body.summary);
     } catch (caught) {
@@ -107,13 +109,12 @@ export default function Ledger() {
   const update = async (id: string, status: 'done' | 'dropped' | 'open') => {
     setBusy(id);
     try {
-      const response = await fetch('/api/commitments', {
+      const response = await apiFetch('/api/commitments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ ids: [id], status }),
       });
-      if (!response.ok) throw new Error((await response.json()).error ?? 'Update failed');
+      if (!response.ok) throw new Error(response.error || 'Update failed');
       say(status === 'done' ? 'Marked done' : status === 'dropped' ? 'Removed' : 'Reopened');
       await load();
     } catch (caught) {
