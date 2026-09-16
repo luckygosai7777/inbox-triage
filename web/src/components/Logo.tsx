@@ -9,14 +9,15 @@
  *
  * ON THE COLOURS
  *
- * The supplied artwork is cool navy with a bright green check. This theme is
- * warm paper with a rust accent, and those two greens-against-rust fight when
- * they sit near each other. The resolution here: the ring uses the page's own
- * ink, so the mark belongs to the paper rather than sitting on it, and the
- * check keeps its green — a tick reads as "done" in green and as something
- * else entirely in rust. Green appears nowhere else in the chrome, so it stays
- * a brand signal rather than becoming a second accent competing with the
- * first.
+ * The supplied artwork is cool navy with a bright green check. The ring takes
+ * the page's own foreground rather than that navy, so the mark belongs to
+ * whatever it sits on — it was warm ink on paper, and is near-white now that
+ * the ground is dark. Only the variables changed; this file did not.
+ *
+ * The check keeps its green throughout. A tick reads as "done" in green and as
+ * something ambiguous in any brand colour, and green appears nowhere else in
+ * the chrome, so it stays a signal rather than a second accent competing with
+ * the first.
  */
 
 type Props = {
@@ -43,7 +44,7 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
     >
       {/* The disc the check sits on. Barely there — it exists to stop the
           check touching the ring at small sizes. */}
-      <circle cx="50" cy="50" r="23" fill="var(--logo-disc, #f1faf4)" />
+      <circle cx="50" cy="50" r="23" fill="var(--logo-disc, rgba(52, 211, 153, 0.12))" />
 
       {/*
         The ring, open at the upper right. Drawn the long way round —
@@ -52,7 +53,7 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
       */}
       <path
         d="M79.4 33 A34 34 0 1 1 58.8 17.2"
-        stroke="var(--logo-ink, #1a1714)"
+        stroke="var(--logo-ink, #f7f7fb)"
         strokeWidth="12"
         strokeLinecap="round"
       />
@@ -61,7 +62,7 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
           direction of travel. */}
       <path
         d="M53.3 26.1 L67.5 19.5 L58.5 6.7"
-        stroke="var(--logo-ink, #1a1714)"
+        stroke="var(--logo-ink, #f7f7fb)"
         strokeWidth="12"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -71,7 +72,7 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
       {/* The check. */}
       <path
         d="M36 51.5 L45.5 61 L64.5 38.5"
-        stroke="var(--logo-check, #22a55f)"
+        stroke="var(--logo-check, #34d399)"
         strokeWidth="10"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -82,7 +83,7 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
         <text
           x="112"
           y="72"
-          fill="var(--logo-ink, #1a1714)"
+          fill="var(--logo-ink, #f7f7fb)"
           fontFamily="var(--font-display), Georgia, serif"
           fontSize="70"
           fontWeight="600"

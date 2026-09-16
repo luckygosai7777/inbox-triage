@@ -3,6 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 
+import CountUp from './CountUp';
+
 import { useToast } from './Shell';
 
 type Row = {
@@ -185,7 +187,8 @@ export default function Inbox() {
                     What you owe
                   </div>
                   <div className="h2 mt-4">
-                    {ledger.total} {ledger.total === 1 ? 'thing' : 'things'} you owe people
+                    <CountUp value={ledger.total} /> {ledger.total === 1 ? 'thing' : 'things'} you
+                    owe people
                   </div>
                   <div
                     className="small mt-4"

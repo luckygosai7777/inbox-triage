@@ -4,85 +4,94 @@
    components use these classes and reserve inline styles for dynamic values. */
 
 /*
- * WARM EDITORIAL
+ * AURORA
  *
- * The first version of this was dark, and dark was the wrong instinct for what
- * this product is. Owed is about obligations — money, deadlines, people waiting
- * on you. That is an accounting of your word, and it wants to read like a
- * well-set page rather than a control panel.
+ * Near-black, with light in it. The previous theme was warm paper and read as
+ * calm but static; this one is built so the surface itself is alive — a slow
+ * gradient drifting behind everything, glass that picks up the colour under it,
+ * and motion on anything that changes.
  *
- * Three rules hold the whole thing together:
+ * Four rules keep that from becoming noise:
  *
- *   1. Paper, not white. #FAF8F4 has warmth in it; pure #FFF is clinical and
- *      glares. Cards sit *above* the page in true white, so hierarchy comes
- *      from a lightness difference rather than from borders everywhere.
- *   2. One accent, used sparingly. Rust earns attention precisely because
- *      almost nothing else is coloured.
- *   3. Ink is never pure black. #1A1714 is warm-black; #000 on warm paper
- *      reads as a hole punched in it.
+ *   1. The ground is never flat black. #08080C with a drifting aurora behind
+ *      it, so two identical cards in different corners sit on different light.
+ *      Pure #000 kills the glass effect entirely — there is nothing to refract.
+ *   2. Surfaces are translucent white, not grey. rgba(255,255,255,0.04) over a
+ *      coloured ground picks that colour up; a hardcoded #16161A cannot, and
+ *      reads as a sticker on the page.
+ *   3. Every raised surface gets an inset top highlight. One hairline of light
+ *      along the top edge is what separates "glass" from "grey box" — it is the
+ *      cheapest and most convincing depth cue there is.
+ *   4. Colour is spent on one thing at a time. Violet is the brand, cyan is its
+ *      partner in gradients only, and rose means late. Nothing else is coloured.
  */
 :root {
-  --bg-page: #faf8f4;      /* warm paper — the page itself */
-  --bg-primary: #ffffff;   /* cards and inputs, lifted off the paper */
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f2eee7;  /* pressed, selected, raised-but-recessed */
-  --bg-hover: #f6f3ed;
-  --bg-stripe: #f5f2ec;
-  --bg-chip: #f0ebe2;
+  /* Ground. --bg-page is painted under the aurora layer. */
+  --bg-page: #08080c;
+  --bg-deep: #05050a;
 
-  --text-primary: #1a1714; /* warm black — never #000 on warm paper */
-  --text-body: #2e2a26;
-  --text-secondary: #635c54;
-  --text-tertiary: #8a8178;
-  --text-faint: #a9a096;
+  /* Surfaces are alpha, so they take colour from the aurora beneath them. */
+  --bg-primary: rgba(255, 255, 255, 0.035);
+  --bg-secondary: rgba(255, 255, 255, 0.045);
+  --bg-tertiary: rgba(255, 255, 255, 0.075);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-stripe: rgba(255, 255, 255, 0.025);
+  --bg-chip: rgba(255, 255, 255, 0.06);
 
-  --border-light: #e9e3d9;
-  --border-medium: #ddd5c8;
-  --border-strong: #c7bdac;
-  --border-input: #ddd5c8;
-  --border-row: #efeae1;
-  --border-danger: #e3c0b4;
+  --text-primary: #f7f7fb;
+  --text-body: #d8d8e4;
+  --text-secondary: #a0a0b4;
+  --text-tertiary: #71718a;
+  --text-faint: #4e4e63;
 
-  /* Rust. Warm enough to belong on the paper, dark enough to carry white. */
-  --accent: #b4441e;
-  --accent-hover: #9a3917;
-  --accent-active: #822f12;
-  --accent-ink: #ffffff;
-  --accent-wash: rgba(180, 68, 30, 0.07);
+  --border-light: rgba(255, 255, 255, 0.07);
+  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --border-input: rgba(255, 255, 255, 0.11);
+  --border-row: rgba(255, 255, 255, 0.05);
+  --border-danger: rgba(244, 63, 94, 0.35);
 
-  /* Semantics are deliberately *not* near-rust, or "late" and "brand" blur. */
-  --danger: #9f1239;       /* wine — overdue, destructive */
-  --danger-wash: rgba(159, 18, 57, 0.07);
-  --danger-border: #e3b9c5;
-  --warning: #a16207;      /* ochre */
-  --success: #15803d;      /* forest */
+  /* Violet is the brand; cyan only ever appears alongside it in a gradient. */
+  --accent: #8b6cff;
+  --accent-hover: #a189ff;
+  --accent-active: #7857f5;
+  --accent-ink: #0a0713;
+  --accent-wash: rgba(139, 108, 255, 0.14);
+  --accent-2: #22d3ee;
+  --gradient: linear-gradient(135deg, #8b6cff 0%, #22d3ee 100%);
+
+  --danger: #fb7185;
+  --danger-wash: rgba(251, 113, 133, 0.12);
+  --danger-border: rgba(251, 113, 133, 0.3);
+  --warning: #fbbf24;
+  --success: #34d399;
 
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --radius-sm: 5px;
-  --radius: 7px;
-  --radius-lg: 11px;
+  --radius-sm: 7px;
+  --radius: 11px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
-  /* Shadows do the lifting that borders used to. Warm-tinted, never neutral
-     grey, or cards look like they were cut out of a different document. */
-  --shadow-sm: 0 1px 2px rgba(60, 46, 30, 0.05);
-  --shadow: 0 2px 8px rgba(60, 46, 30, 0.07), 0 1px 2px rgba(60, 46, 30, 0.04);
-  --shadow-lift: 0 8px 24px rgba(60, 46, 30, 0.1), 0 2px 6px rgba(60, 46, 30, 0.06);
+  /* Depth on a dark ground comes from shadow plus an inset top highlight —
+     the highlight is what makes it read as glass rather than a grey box. */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), var(--edge);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), var(--edge);
+  --shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 108, 255, 0.18), var(--edge);
+  --glow: 0 0 24px rgba(139, 108, 255, 0.35);
 
+  --blur: saturate(150%) blur(14px);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* The mark takes the page's ink so it belongs to the paper. The check keeps
-     its green: a tick reads as "done" in green and as something else in rust.
-     Green appears nowhere else in the chrome, so it stays a brand signal
-     rather than a second accent competing with the first. */
-  --logo-ink: #1a1714;
-  --logo-check: #22a55f;
-  --logo-disc: #f1faf4;
+  /* The mark sits on dark now: light ring, and the check keeps its green. */
+  --logo-ink: #f7f7fb;
+  --logo-check: #34d399;
+  --logo-disc: rgba(52, 211, 153, 0.12);
 
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -96,6 +105,56 @@ body,
   padding: 0;
   min-height: 100%;
   background: var(--bg-page);
+}
+
+/*
+ * The living ground.
+ *
+ * Three large radial gradients on one fixed layer behind everything, drifting
+ * on a slow loop. Animating `transform` rather than `background-position`
+ * keeps it on the compositor, so it costs no layout and no paint — this can
+ * run for an hour without heating a laptop.
+ *
+ * The blur is what stops three circles reading as three circles. The grain on
+ * top of it is not decoration either: a gradient this wide and this dark bands
+ * visibly on 8-bit displays, and a little noise hides it.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -25%;
+  z-index: -2;
+  background:
+    radial-gradient(38% 38% at 18% 22%, rgba(139, 108, 255, 0.3), transparent 62%),
+    radial-gradient(32% 32% at 82% 12%, rgba(34, 211, 238, 0.18), transparent 60%),
+    radial-gradient(45% 45% at 62% 82%, rgba(168, 85, 247, 0.2), transparent 64%),
+    radial-gradient(30% 30% at 8% 78%, rgba(34, 211, 238, 0.12), transparent 60%);
+  filter: blur(60px);
+  will-change: transform;
+  animation: aurora 28s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.035;
+  /* A tiny SVG feTurbulence, inlined so it costs no request. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes aurora {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-3%, 3%, 0) scale(1.04);
+  }
 }
 
 body {
@@ -118,7 +177,7 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(180, 68, 30, 0.16);
+  background: rgba(139, 108, 255, 0.35);
 }
 
 ::-webkit-scrollbar {
@@ -159,13 +218,11 @@ button:disabled {
 .h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 27px;
+  font-size: 28px;
   font-weight: 600;
-  /* Fraunces is a display serif: it wants its optical size raised and its
-     tracking left alone. The -0.02em here was tuned for a grotesk. */
-  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 36;
-  letter-spacing: -0.005em;
-  line-height: 1.2;
+  /* Back to a grotesk, so the tight tracking is right again. */
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: var(--text-primary);
 }
 .h2 {
@@ -182,10 +239,14 @@ button:disabled {
 }
 .metric-number {
   font-family: var(--font-display);
-  font-size: 34px;
-  font-weight: 600;
-  font-variation-settings: 'opsz' 40;
-  color: var(--text-primary);
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  /* The number is the point of the card, so it carries the brand gradient. */
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   line-height: 1;
   /* Tabular figures so a counting animation does not make the row jitter. */
   font-variant-numeric: tabular-nums;
@@ -246,7 +307,9 @@ button:disabled {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  background: var(--bg-page);
+  /* Transparent on purpose: an opaque background here would cover the aurora
+     and leave the whole app flat. */
+  background: transparent;
   color: var(--text-body);
 }
 .shell-main {
@@ -261,7 +324,9 @@ button:disabled {
 
 .nav-rail {
   border-right: 1px solid var(--border-light);
-  background: var(--bg-primary);
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -355,19 +420,23 @@ button:disabled {
   background: var(--bg-secondary);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
-  /* On paper a card is a sheet on a desk, so it casts a shadow rather than
-     being drawn with a heavier outline. */
+  /* Glass: blur what is behind, then a hairline of light along the top edge.
+     The highlight is doing most of the work — without it this is a grey box. */
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   box-shadow: var(--shadow-sm);
   transition:
-    box-shadow 0.22s var(--ease),
-    transform 0.22s var(--ease),
-    border-color 0.22s var(--ease);
+    box-shadow 0.3s var(--ease),
+    transform 0.3s var(--ease),
+    border-color 0.3s var(--ease),
+    background 0.3s var(--ease);
 }
 /* Only cards that go somewhere respond to the pointer. */
 a .card:hover,
 .card-interactive:hover {
+  background: var(--bg-hover);
   box-shadow: var(--shadow-lift);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--border-medium);
 }
 .card-pad {
@@ -448,26 +517,36 @@ a .card:hover,
 }
 .btn-primary {
   border: 0;
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--gradient);
+  color: #0a0713;
   font-weight: 600;
   font-size: 14px;
   padding: 10px 18px;
+  position: relative;
+  /* Background-position on a wider gradient lets the fill slide on hover —
+     a gradient cannot be transitioned, but its position can. */
+  background-size: 180% 100%;
+  background-position: 0% 50%;
+  transition:
+    background-position 0.45s var(--ease),
+    box-shadow 0.3s var(--ease),
+    transform 0.12s var(--ease);
 }
 .btn-primary {
   box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-  color: var(--accent-ink);
-  box-shadow: var(--shadow);
+  background-position: 100% 50%;
+  color: #0a0713;
+  box-shadow: var(--glow);
 }
 .btn-primary:active:not(:disabled) {
   background: var(--accent-active);
 }
 .btn-primary:disabled {
-  background: var(--border-light);
+  background: var(--bg-tertiary);
   color: var(--text-faint);
+  box-shadow: none;
 }
 .btn-danger {
   border-color: var(--border-danger);
@@ -526,7 +605,8 @@ a .card:hover,
 .chip[aria-pressed='true'] {
   background: var(--accent-wash);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: 0 0 16px rgba(139, 108, 255, 0.25), var(--edge);
 }
 .chip-sm {
   font-size: 12px;
@@ -597,7 +677,7 @@ a .card:hover,
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--bg-primary);
+  background: rgba(0, 0, 0, 0.22);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   padding: 0 12px;
@@ -1245,8 +1325,9 @@ a .card:hover,
   /* Translucent paper, so the page scrolls visibly underneath the bar. Written
      as an rgba of --bg-page; it cannot be the variable itself because there is
      no alpha to apply to it here. */
-  background: rgba(250, 248, 244, 0.86);
-  backdrop-filter: blur(12px);
+  background: rgba(8, 8, 12, 0.72);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   border-bottom: 1px solid var(--border-light);
 }
 .brand {
@@ -1602,7 +1683,7 @@ a .card:hover,
   width: 100%;
   min-height: 140px;
   resize: vertical;
-  background: var(--bg-primary);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   color: var(--text-body);
@@ -1664,8 +1745,14 @@ a .card:hover,
 
 /* One slow breath. Loud enough to find, quiet enough to sit next to. */
 @keyframes breathe {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 12px rgba(251, 113, 133, 0.5);
+  }
+  50% {
+    opacity: 0.7;
+    text-shadow: 0 0 4px rgba(251, 113, 133, 0.2);
+  }
 }
 
 /*
@@ -1711,9 +1798,10 @@ a .card:hover,
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 44px;
+  width: 56px;
   height: 2px;
-  background: var(--accent);
+  border-radius: 2px;
+  background: var(--gradient);
   transform-origin: left;
   animation: sweep 0.5s var(--ease) 0.1s both;
 }
@@ -1742,9 +1830,28 @@ a .card:hover,
 .mail-row {
   transition: background 0.16s var(--ease), padding-left 0.16s var(--ease);
 }
+.mail-row {
+  position: relative;
+}
 .mail-row:hover {
-  /* A 3px nudge is enough to feel live without reflowing the column. */
   padding-left: 19px;
+}
+/* A bar of brand colour wipes in from the left edge on hover. Scale rather
+   than width, so it animates on the compositor. */
+.mail-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gradient);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.25s var(--ease);
+}
+.mail-row:hover::before {
+  transform: scaleY(1);
 }
 
 .chip {
@@ -1827,7 +1934,7 @@ a .card:hover,
   outline: none;
   resize: vertical;
   min-height: 200px;
-  background: var(--bg-primary);
+  background: rgba(0, 0, 0, 0.2);
   color: var(--text-body);
   font-family: var(--font-body);
   font-size: 14px;
