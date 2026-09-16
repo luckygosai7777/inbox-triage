@@ -141,12 +141,17 @@ a deadline.
 
 ## 8. Rate limiting
 
-**Attack it stops:** a stolen session or runaway client burning your Gmail quota
-and your Anthropic bill.
+**Attack it stops:** a stolen session or runaway client burning your Gmail
+quota, your model bill, or your reputation with your own contacts.
 
 Counters live in Postgres (`rate_limits`), not memory, because serverless
-invocations share no state. `/api/sync` — the only endpoint that spends money —
-is capped at **6 per hour per user**.
+invocations share no state.
+
+| Endpoint | Cap | Why that number |
+|---|---|---|
+| `/api/sync` | 6/hour | Spends model tokens and Gmail quota. A mailbox changes slowly enough that six is generous. |
+| `/api/draft` | 20/hour | One model call and two Gmail round trips each. |
+| `/api/send` | 40/hour | Generous for a person, ruinous for a script. This is the one that matters: a stolen session must not become a way to mail this user's clients. |
 
 ## 8b. Scheduled jobs
 
@@ -162,6 +167,53 @@ misconfigured deploy breaks loudly rather than quietly exposing a job that costs
 money. These routes are exempt from the same-origin CSRF check, because they are
 called by Vercel's scheduler with no Origin header — the bearer secret is their
 authentication.
+
+## 8c. Sending mail
+
+**Attack it stops:** the app becoming a way to send mail as someone else, and
+a hostile email talking it into doing so.
+
+The app can send from the user's Gmail account. Four properties bound that:
+
+1. **Nothing sends itself.** There is no scheduled send, no auto-reply, and no
+   automated path into `/api/send`. Every message that leaves an account was
+   visible on screen when a person pressed the button. The model writes into a
+   textarea; it cannot reach the send route.
+2. **Model output is not trusted to address mail.** A draft contributes body
+   text only. Recipients come from the request, validated by Zod, and a draft
+   can never add one.
+3. **Header injection is impossible by construction.** Newlines are stripped
+   from every header value in `lib/mime.ts` — a newline in a header is a forged
+   header, and that is how a `Bcc:` gets smuggled through a subject line. Tested
+   directly.
+4. **A draft cannot introduce a link.** Any URL in generated text that was not
+   already in the thread is stripped before the user sees it
+   (`voice.foreignLinks`). This is the sharp edge of prompt injection here: the
+   draft is content the user sends to a client under their own name, built from
+   text a stranger wrote. A message that persuaded the model to add a link would
+   make the user its delivery mechanism.
+
+**Attachments** are capped at 3 MB per file and 3.5 MB total, checked before
+anything expensive happens. They are relayed to Gmail and never written to our
+storage.
+
+## 8d. A second model provider
+
+**What changes:** with `GEMINI_API_KEY` set, email content is sent to Google
+rather than Anthropic. This is a data-flow decision, not a configuration
+detail, and it is stated here because a security document that omits where
+user data goes is worse than none.
+
+- Which provider answers is reported by `/api/health` and
+  `/api/diagnostics/ai`, so it is never a guess.
+- **On Google's free tier, prompts may be used to improve their products.** The
+  content here is other people's email. For a real mailbox this is the material
+  consideration, and it is why the paid path takes priority automatically
+  whenever `ANTHROPIC_API_KEY` is present.
+- The key travels in a header, never a query string, because URLs reach proxy
+  logs and error reports.
+- Both providers get the same defences: fenced untrusted content, schema
+  -constrained output, and clamping on the way back.
 
 ## 9. Input validation
 
@@ -212,8 +264,12 @@ Stated plainly rather than left for you to discover:
   ever sync, drop to `gmail.readonly` and the blast radius shrinks. It is a
   Google-restricted scope requiring verification (and likely a security
   assessment) before public launch.
-- **No audit log.** Who synced what and when is not recorded. Worth adding
-  before multi-user or team use.
+- **No audit log.** Who synced what and when is not recorded — and now that
+  the app can send, neither is what was sent. This moved up the list when
+  sending shipped: worth adding before anyone but you uses it.
+- **Free-tier model content may be used for training.** See 8d. Not a flaw in
+  this code, but a real property of the deployment, and the one worth knowing
+  before pointing a client mailbox at it.
 - **No MFA enforcement.** Delegated to the user's Google account.
 - **Rate limiting is per user, not per IP.** An unauthenticated flood is handled
   by Vercel's infrastructure, not by this app.
