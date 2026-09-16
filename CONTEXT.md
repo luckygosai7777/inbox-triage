@@ -1,7 +1,7 @@
 # Owed — project context
 
 Paste this into any AI assistant to bring it up to speed on the project.
-Last updated: 2026-09-15 (sending, composing, and themed)
+Last updated: 2026-09-16 (Aurora theme, bounded provider retries)
 
 ---
 
@@ -76,7 +76,7 @@ mail rather than a place to work in it, and the drafted reply — the whole poin
 | LLM | Anthropic Claude, or Google Gemini on its free tier. `AI_PROVIDER=auto` prefers Anthropic when its key is present. The Gemini model is **discovered at runtime** from the catalogue the key can see — never hardcoded. |
 | Email APIs | `googleapis` (Gmail + Calendar) |
 | Validation | Zod on every API route |
-| Tests | Vitest — 201 tests, none touch the network |
+| Tests | Vitest — 208 tests, none touch the network |
 | Transactional email | Resend (optional; digests skip if unconfigured) |
 
 ### Repo layout
@@ -94,8 +94,14 @@ web/                       ← the app. Vercel Root Directory must be set to thi
       api.ts               route() wrapper: auth + Zod + rate limit + error shaping
       parsing.ts           headers, bodies, deadline extraction (pure, testable)
       commitments.ts       the Ledger: extraction, ageing, resolution hints
-      llm.ts               Claude calls, prompt-injection defence
-      gmail.ts             inbox + SENT sync, calendar, archive, trash
+      llm.ts               Claude AND Gemini calls, provider selection,
+                           runtime Gemini model discovery, injection defence
+      voice.ts             measures how the user writes, from their sent mail
+      mime.ts              RFC 2822 message building — threading, encoded
+                           words, attachments (pure, heavily tested)
+      http.ts              client-side: reads a response that may not be JSON
+      legal.ts             entity details for privacy/terms, from process.env
+      gmail.ts             inbox + SENT sync, calendar, archive, trash, send
       scheduler.ts         free-gap finding, reply packing
       search.ts            ranking (AND semantics, field weights)
       composer.ts          bulk-send token substitution
@@ -118,7 +124,8 @@ web/                       ← the app. Vercel Root Directory must be set to thi
 Public   /  /pricing  /privacy  /terms  /login
 App      /app  /app/ledger  /app/schedule  /app/settings  /app/thread/[id]
 API      /api/mail  /api/commitments  /api/schedule  /api/sync
-         /api/thread/[id]  /api/draft  /api/send  /api/health
+         /api/thread/[id]  /api/draft  /api/send
+         /api/health  /api/diagnostics/ai
          /api/account  /api/export  /api/cron/sync  /api/cron/digest
 ```
 
@@ -281,6 +288,26 @@ Also: **a git push does not always trigger a Vercel build.** If the site does
 not change, check Deployments — if the top entry is not your commit, it never
 ran. An empty commit re-fires it.
 
+## The look
+
+**Aurora** — near-black `#08080C` under a slowly drifting gradient, translucent
+white surfaces that pick up the colour beneath them, violet `#8B6CFF` as the
+only brand colour with cyan appearing beside it in gradients. Space Grotesk for
+display, Inter for reading.
+
+It replaced a warm-paper theme that was calm but static, which was the
+complaint. Four rules keep the motion from becoming noise: the ground is never
+flat black (pure `#000` leaves nothing for glass to refract), surfaces are
+alpha white rather than grey (a hardcoded `#16161A` cannot pick up colour and
+reads as a sticker), every raised surface gets one hairline of inset light
+along its top edge, and colour is spent on one thing at a time.
+
+Motion appears only where something changed: the ledger total counts up, mail
+rows wipe a gradient bar in from the left, overdue counts glow. The aurora
+animates `transform` rather than `background-position`, so it stays on the
+compositor and costs no layout or paint. All of it stops under
+`prefers-reduced-motion`.
+
 ## Recent decisions worth not re-litigating
 
 - **Categories are earned, not assigned by elimination.** `Clients` used to be
@@ -304,6 +331,19 @@ ran. An empty commit re-fires it.
 - **The Gemini model is never hardcoded.** It is discovered from the catalogue
   the key can see and cached; a 404 re-resolves once. A hardcoded id is a guess
   about a remote list that rots, and the user cannot correct it.
+- **A 503 from Gemini is "not right now", not a failure** — it is the free tier
+  being busy. Retry twice with backoff, then walk down the ranking, since
+  capacity is per-model. But bound it: 20 seconds and three models. An unbounded
+  chain ran past the 60s function limit and turned a clear error into a timeout
+  whose body was an HTML page.
+- **Never call `response.json()` directly on the client.** A timed-out function
+  is answered by the platform with HTML, and parsing that throws a SyntaxError
+  quoting the page — a message about our parser, not the user's problem, aimed
+  at the wrong layer. `lib/http.ts` exists for this.
+- **The free tier is not reliable enough for drafting to be the headline
+  feature.** Sorting, the ledger and sending do not depend on it. $5 of
+  Anthropic credit removes the entire class of problem, and the paid path takes
+  priority automatically when its key is present.
 
 ## Conventions worth knowing
 
