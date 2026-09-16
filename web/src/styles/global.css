@@ -934,7 +934,7 @@ a .card:hover,
   color: var(--accent-ink);
 }
 .step-btn[data-state='passed'] .step-num {
-  background: rgba(180, 68, 30, 0.1);
+  background: var(--accent-wash);
   color: var(--accent);
 }
 .step-sep {
@@ -1024,7 +1024,7 @@ a .card:hover,
   height: 22px;
   flex: none;
   border-radius: 50%;
-  background: rgba(180, 68, 30, 0.1);
+  background: var(--accent-wash);
   border: 1px solid var(--accent);
   color: var(--accent);
   font-size: 9px;
@@ -1055,7 +1055,7 @@ a .card:hover,
   height: 36px;
   border-radius: 50%;
   flex: none;
-  background: rgba(180, 68, 30, 0.1);
+  background: var(--accent-wash);
   border: 1px solid var(--accent);
   display: grid;
   place-items: center;
@@ -1385,7 +1385,7 @@ a .card:hover,
   letter-spacing: 0.1em;
   color: var(--accent);
   background: var(--accent-wash);
-  border: 1px solid rgba(180, 68, 30, 0.28);
+  border: 1px solid var(--accent);
   padding: 5px 11px;
   border-radius: var(--radius-pill);
 }
