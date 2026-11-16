@@ -60,8 +60,8 @@ function contentSecurityPolicy(nonce: string): string {
     //
     // Dev still needs 'unsafe-eval' for fast refresh; production does not.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ''}`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
     "img-src 'self' data: blob: https://*.googleusercontent.com",
     `connect-src 'self' ${supabase} ${supabaseWs}`.trim(),
     "frame-ancestors 'none'",

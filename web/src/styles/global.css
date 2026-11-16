@@ -66,9 +66,10 @@
   --warning: #fbbf24;
   --success: #34d399;
 
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Space Grotesk', 'Inter', sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  /* --font-inter/-grotesk/-plex are set by next/font on <html> (app/layout.tsx). */
+  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-inter), sans-serif;
+  --font-mono: var(--font-plex), ui-monospace, monospace;
 
   --radius-sm: 7px;
   --radius: 11px;

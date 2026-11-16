@@ -1,8 +1,23 @@
 import type { Metadata, Viewport } from 'next';
+import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
 import { connection } from 'next/server';
 
 import { appUrl } from '@/lib/url';
 import '@/styles/global.css';
+
+// Space Grotesk for display: a grotesk with enough character to carry a headline
+// on a dark ground, where a neutral face disappears. Inter for reading, because
+// long text on dark needs a face that gets out of the way at low contrast.
+// Self-hosted at build: the Google Fonts stylesheet was a render-blocking
+// cross-origin request (~95 ms before first paint) and told Google every visit.
+const display = Space_Grotesk({ subsets: ['latin'], display: 'swap', variable: '--font-grotesk' });
+const body = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+const mono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-plex',
+});
 
 export const metadata: Metadata = {
   // Makes every relative URL in page metadata resolve against the real host.
@@ -30,21 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // strict-dynamic blocks all its scripts. /login shipped dead this way.
   await connection();
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        {/*
-          Space Grotesk for display: a grotesk with enough character to carry a
-          headline on a dark ground, where a neutral face disappears. Inter for
-          reading, because long text on dark needs a face that gets out of the
-          way and stays legible at low contrast.
-        */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );
