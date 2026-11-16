@@ -47,7 +47,7 @@ type Limit = { bucket: string; max: number; windowSeconds: number };
 type Options<T> = {
   // Input side is widened: schemas using .default() accept a partial object
   // and produce a complete one, which is what handlers receive.
-  schema?: z.ZodType<T, z.ZodTypeDef, any>;
+  schema?: z.ZodType<T, any>;
   limit?: Limit;
 };
 
