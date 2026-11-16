@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { connection } from 'next/server';
 
 import { appUrl } from '@/lib/url';
 import '@/styles/global.css';
@@ -24,7 +25,10 @@ export const viewport: Viewport = {
   themeColor: '#08080c',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Every page must render per request: a prerendered page has no CSP nonce, so
+  // strict-dynamic blocks all its scripts. /login shipped dead this way.
+  await connection();
   return (
     <html lang="en">
       <head>
