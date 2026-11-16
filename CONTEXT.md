@@ -1,7 +1,7 @@
 # Owed — project context
 
 Paste this into any AI assistant to bring it up to speed on the project.
-Last updated: 2026-09-16 (Aurora theme, bounded provider retries)
+Last updated: 2026-11-16 (outage fix: Supabase pause, sign-in redirects, dead /login, Next/Zod advisories)
 
 ---
 
@@ -225,7 +225,7 @@ Also budget ~2.4% for Razorpay, and 18% GST if registered.
 
 ## Current status
 
-**Live:** https://inbox-triage-xi.vercel.app — deployed, signed in, syncing real Gmail.
+**Live:** https://www.getowed.online (apex redirects to www; `inbox-triage-xi.vercel.app` redirects here via `web/vercel.json`).
 **Repo:** github.com/luckygosai7777/inbox-triage (`main`, auto-deploys to Vercel)
 
 ### Working end to end
@@ -244,7 +244,7 @@ All security controls. Database schema with RLS on 13 tables.
 | `GOOGLE_CLIENT_SECRET` | set |
 | `ANTHROPIC_API_KEY` | not set — Gemini answers instead |
 | `GEMINI_API_KEY` | set — the free-tier provider |
-| `CRON_SECRET` | **not set** — background sync and digests do not run |
+| `CRON_SECRET` | set (2026-11-16, Sensitive) — the daily cron also keeps the free Supabase project from pausing |
 | `APP_URL` | not set — falls back to VERCEL_PROJECT_PRODUCTION_URL, fine |
 
 ### ⚠️ Do not regenerate TOKEN_ENCRYPTION_KEY
@@ -258,9 +258,9 @@ reconnect Google.
    Without it, classification and commitment extraction use pattern matching.
    For cheap testing, also set `ANTHROPIC_MODEL=claude-haiku-4-5` and
    `ANTHROPIC_MODEL_FAST=claude-haiku-4-5` — roughly 5x cheaper.
-2. **Add `CRON_SECRET`** — generate with
-   `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-   Until then `/api/cron/*` returns 503 and nothing runs on a schedule.
+2. **Set Supabase → Authentication → URL Configuration → Site URL** to
+   `https://www.getowed.online` (it is still the old vercel.app URL; the
+   redirects in `vercel.json` cover for it until then).
 3. **Judge the ledger quality** against a real mailbox. The extractor is
    deliberately narrow; if it misses real promises, loosen `PROMISE_PATTERNS` in
    `src/lib/commitments.ts`. If it produces noise, tighten `HEDGE_PATTERNS`.
@@ -336,6 +336,15 @@ compositor and costs no layout or paint. All of it stops under
   capacity is per-model. But bound it: 20 seconds and three models. An unbounded
   chain ran past the 60s function limit and turned a clear error into a timeout
   whose body was an HTML page.
+- **Every page renders per request** (`await connection()` in the root
+  layout). A prerendered page has no CSP nonce, and `strict-dynamic` ignores
+  `'self'`, so its scripts are blocked. `/login` shipped dead this way: the
+  button worked only when reached by client-side navigation from `/`.
+- **The free Supabase project pauses after ~7 idle days** and its hostname
+  stops resolving. Sign-in, every API route and the ledger all fail at once
+  while static pages still load. Check DNS for `<ref>.supabase.co` first.
+- **Fonts are self-hosted via `next/font`.** Don't add the Google Fonts
+  `<link>` back: it was render-blocking and widened the CSP.
 - **Never call `response.json()` directly on the client.** A timed-out function
   is answered by the platform with HTML, and parsing that throws a SyntaxError
   quoting the page — a message about our parser, not the user's problem, aimed
