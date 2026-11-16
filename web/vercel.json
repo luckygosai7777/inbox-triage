@@ -4,6 +4,20 @@
   "regions": [
     "sin1"
   ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "inbox-triage-xi.vercel.app" }],
+      "destination": "https://www.getowed.online/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "query", "key": "code", "value": "(?<code>[A-Za-z0-9-]+)" }],
+      "destination": "/auth/callback?code=:code",
+      "permanent": false
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/sync",
