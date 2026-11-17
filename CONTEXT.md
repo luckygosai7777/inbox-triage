@@ -270,12 +270,15 @@ reconnect Google.
    and is tested; screens are not built.
 
 ### Blockers before public launch
-1. **11 placeholders** (`TODO`, `example.com`) in `privacy/page.tsx` and
-   `terms/page.tsx` — real entity name, address, contact email, jurisdiction.
-2. **A real domain.** Google verification for the restricted `gmail.modify`
-   scope requires proving domain ownership in Search Console, and a
-   `*.vercel.app` subdomain cannot be verified. Until then: 100 test users,
-   added manually in Google Cloud → Audience → Test users.
+1. ~~Legal placeholders~~ — done 2026-11-17. The pages read `LEGAL_ENTITY_NAME`,
+   `LEGAL_ADDRESS`, `LEGAL_JURISDICTION` (India) and `CONTACT_EMAIL` from
+   Vercel env (`lib/legal.ts`); change them there, then redeploy.
+2. **Google verification.** Domain: getowed.online, DNS on Cloudflare, and a
+   `google-site-verification` TXT record already exists. Verify it as a Search
+   Console *Domain* property using a Google Cloud project Owner account.
+   Every Gmail read scope is Restricted (checked against Google's scope
+   list), so public launch also needs a yearly CASA assessment by a paid lab.
+   Until then: 100 users at most, plus the "unverified app" warning.
 3. **Legal review** of the terms and privacy policy.
 
 ### Debugging tip learned the hard way
