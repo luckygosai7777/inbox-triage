@@ -1,7 +1,7 @@
 # Owed — project context
 
 Paste this into any AI assistant to bring it up to speed on the project.
-Last updated: 2026-11-16 (outage fix: Supabase pause, sign-in redirects, dead /login, Next/Zod advisories)
+Last updated: 2026-11-18 (Google verification fixes: Gemini paid-only, policies corrected, sign-in on our own domain, narrower Gmail scopes)
 
 ---
 
@@ -60,8 +60,8 @@ no scheduled send, no auto-reply, no automation into the send route.
 This changed on 2026-09-15. It was previously "cannot send at all", with
 replies opening a prefilled Gmail tab. That made the product a viewer of your
 mail rather than a place to work in it, and the drafted reply — the whole point
-— had to be copied elsewhere to be useful. No new Google permission was needed:
-`gmail.modify`, already held for archiving, authorises `users.messages.send`.
+— had to be copied elsewhere to be useful. Sending uses the `gmail.send` scope
+(it rode on `gmail.modify` until 2026-11-18).
 
 ---
 
@@ -72,11 +72,11 @@ mail rather than a place to work in it, and the drafted reply — the whole poin
 | Framework | Next.js 16 (App Router), React 19, TypeScript |
 | Hosting | Vercel (region `sin1` — Singapore, next to the database) |
 | Database | Supabase Postgres, region `ap-southeast-1` |
-| Auth | Supabase Auth, Google OAuth provider |
-| LLM | Anthropic Claude, or Google Gemini on its free tier. `AI_PROVIDER=auto` prefers Anthropic when its key is present. The Gemini model is **discovered at runtime** from the catalogue the key can see — never hardcoded. |
+| Auth | Supabase Auth sessions. The Google OAuth flow runs in the app (`lib/oauth.ts`), which hands Supabase the ID token |
+| LLM | Anthropic Claude, or Google Gemini on a **paid** key only (`GEMINI_PAID_TIER=true`). `AI_PROVIDER=auto` prefers Anthropic when its key is present. The Gemini model is **discovered at runtime** from the catalogue the key can see — never hardcoded. |
 | Email APIs | `googleapis` (Gmail + Calendar) |
 | Validation | Zod on every API route |
-| Tests | Vitest — 208 tests, none touch the network |
+| Tests | Vitest — 220 tests, none touch the network |
 | Transactional email | Resend (optional; digests skip if unconfigured) |
 
 ### Repo layout
@@ -101,7 +101,8 @@ web/                       ← the app. Vercel Root Directory must be set to thi
                            words, attachments (pure, heavily tested)
       http.ts              client-side: reads a response that may not be JSON
       legal.ts             entity details for privacy/terms, from process.env
-      gmail.ts             inbox + SENT sync, calendar, archive, trash, send
+      oauth.ts             Google sign-in: scopes, state + PKCE, consent URL
+      gmail.ts             inbox + SENT sync, calendar
       scheduler.ts         free-gap finding, reply packing
       search.ts            ranking (AND semantics, field weights)
       composer.ts          bulk-send token substitution
@@ -122,6 +123,7 @@ web/                       ← the app. Vercel Root Directory must be set to thi
 
 ```
 Public   /  /pricing  /privacy  /terms  /login
+Auth     /auth/google (starts sign-in)  /auth/callback (Google returns here)
 App      /app  /app/ledger  /app/schedule  /app/settings  /app/thread/[id]
 API      /api/mail  /api/commitments  /api/schedule  /api/sync
          /api/thread/[id]  /api/draft  /api/send
@@ -148,7 +150,8 @@ Layered deliberately; no single control is trusted alone. Full detail in
    `getSession()` (which only decodes a cookie the client could edit). The user
    id never comes from a request body — IDOR is impossible by construction.
 5. **CSRF** — SameSite=Lax cookies plus an Origin check on all mutating API
-   requests.
+   requests. Google sign-in carries a random `state` and PKCE in a 10-minute
+   httpOnly cookie, so a callback this browser did not start is refused.
 6. **CSP with a per-request nonce and `strict-dynamic`** — no `unsafe-inline`
    for scripts. Plus HSTS, frame denial, nosniff, referrer policy, permissions
    policy.
@@ -242,8 +245,9 @@ All security controls. Database schema with RLS on 13 tables.
 | `TOKEN_ENCRYPTION_KEY` | set — **43 chars, do not "fix" it** (see below) |
 | `GOOGLE_CLIENT_ID` | set |
 | `GOOGLE_CLIENT_SECRET` | set |
-| `ANTHROPIC_API_KEY` | not set — Gemini answers instead |
-| `GEMINI_API_KEY` | set — the free-tier provider |
+| `ANTHROPIC_API_KEY` | not set |
+| `GEMINI_API_KEY` | set — **ignored** until `GEMINI_PAID_TIER=true` |
+| `GEMINI_PAID_TIER` | not set — so no model sees mail, and drafting is off |
 | `CRON_SECRET` | set (2026-11-16, Sensitive) — the daily cron also keeps the free Supabase project from pausing |
 | `APP_URL` | not set — falls back to VERCEL_PROJECT_PRODUCTION_URL, fine |
 
@@ -254,31 +258,38 @@ Changing it makes that token permanently undecryptable and forces every user to
 reconnect Google.
 
 ### Next steps, roughly in order
-1. **Add `ANTHROPIC_API_KEY`** (needs $5 prepaid credit at console.anthropic.com).
-   Without it, classification and commitment extraction use pattern matching.
+1. **Add `ANTHROPIC_API_KEY`** (needs $5 prepaid credit at console.anthropic.com),
+   or enable billing on the Gemini key's project and set `GEMINI_PAID_TIER=true`.
+   Without one of them no model runs: classification and commitment extraction
+   use pattern matching, and drafting is unavailable.
    For cheap testing, also set `ANTHROPIC_MODEL=claude-haiku-4-5` and
    `ANTHROPIC_MODEL_FAST=claude-haiku-4-5` — roughly 5x cheaper.
-2. **Set Supabase → Authentication → URL Configuration → Site URL** to
-   `https://www.getowed.online` (it is still the old vercel.app URL; the
-   redirects in `vercel.json` cover for it until then).
-3. **Judge the ledger quality** against a real mailbox. The extractor is
+2. **Judge the ledger quality** against a real mailbox. The extractor is
    deliberately narrow; if it misses real promises, loosen `PROMISE_PATTERNS` in
    `src/lib/commitments.ts`. If it produces noise, tighten `HEDGE_PATTERNS`.
-4. **Onboarding** for a first-run empty ledger.
-5. **Billing** (Razorpay) — the pricing page currently sends everyone to Free.
-6. **Bulk-send UI, subscription cleanup UI, VIP management UI** — logic exists
+3. **Onboarding** for a first-run empty ledger.
+4. **Billing** (Razorpay) — the pricing page currently sends everyone to Free.
+5. **Bulk-send UI, subscription cleanup UI, VIP management UI** — logic exists
    and is tested; screens are not built.
 
 ### Blockers before public launch
 1. ~~Legal placeholders~~ — done 2026-11-17. The pages read `LEGAL_ENTITY_NAME`,
    `LEGAL_ADDRESS`, `LEGAL_JURISDICTION` (India) and `CONTACT_EMAIL` from
    Vercel env (`lib/legal.ts`); change them there, then redeploy.
-2. **Google verification.** Domain: getowed.online, DNS on Cloudflare, and a
-   `google-site-verification` TXT record already exists. Verify it as a Search
-   Console *Domain* property using a Google Cloud project Owner account.
-   Every Gmail read scope is Restricted (checked against Google's scope
-   list), so public launch also needs a yearly CASA assessment by a paid lab.
-   Until then: 100 users at most, plus the "unverified app" warning.
+2. **Google verification.** Fixed in code on 2026-11-18: Gemini free tier off,
+   privacy/terms/homepage no longer claim the app cannot send, scopes narrowed
+   to `gmail.readonly` + `gmail.send` + `calendar.readonly`, and Google now
+   redirects to `https://www.getowed.online/auth/callback`, not supabase.co (a
+   redirect-URI domain must be one you verify, and supabase.co never can be).
+   Remaining, all in consoles: register that redirect URI on the OAuth client
+   (Google Auth Platform → Clients), then remove the supabase.co redirect URI and
+   any supabase.co authorized domain; verify getowed.online as a Search Console
+   *Domain* property (TXT record already on Cloudflare) with a project Owner
+   account; Branding (home, /privacy, /terms, authorized domain getowed.online)
+   → Verify Branding → publish; then data-access verification with the demo
+   video. Every Gmail read scope is Restricted, so public launch also needs a
+   yearly CASA assessment by a paid lab. Until then: 100 users at most, plus
+   the "unverified app" warning.
 3. **Legal review** of the terms and privacy policy.
 
 ### Debugging tip learned the hard way
@@ -373,6 +384,20 @@ compositor and costs no layout or paint. All of it stops under
   is answered by the platform with HTML, and parsing that throws a SyntaxError
   quoting the page — a message about our parser, not the user's problem, aimed
   at the wrong layer. `lib/http.ts` exists for this.
+- **Gmail content never goes to a free AI tier.** Gemini's free tier lets
+  Google use input to improve its products and lets human reviewers read it;
+  for other people's email that breaks Google's Limited Use rules. A Gemini key
+  is ignored unless `GEMINI_PAID_TIER=true`. It ran on the free tier until
+  2026-11-18.
+- **Google sign-in runs on our own domain, not Supabase's.** Supabase's hosted
+  flow made Google redirect to `<ref>.supabase.co`, which can never pass brand
+  verification. The app exchanges the code itself and calls
+  `signInWithIdToken`; Supabase still issues the session and RLS is unchanged.
+  The Supabase Google provider must stay enabled with this client ID.
+- **Scopes are the narrowest that work:** `gmail.readonly` + `gmail.send` +
+  `calendar.readonly`. `gmail.modify` was held for archiving, which no screen
+  ever offered. Tokens granted before the change still hold `gmail.modify`,
+  which covers both.
 - **The free tier is not reliable enough for drafting to be the headline
   feature.** Sorting, the ledger and sending do not depend on it. $5 of
   Anthropic credit removes the entire class of problem, and the paid path takes

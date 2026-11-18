@@ -1,55 +1,76 @@
 /**
- * OAuth callback.
+ * OAuth callback. Google redirects here after consent (see lib/oauth.ts).
  *
- * Supabase validates the Google exchange and issues the session. The only extra
- * work here is capturing the Google *refresh* token — Supabase hands it back
- * once, on the first consent — encrypting it, and storing it so background sync
- * can reach Gmail later without the user present.
+ * 1. The returning state must match the cookie /auth/google set, or the
+ *    request was not started by this browser and is refused.
+ * 2. The code is exchanged with Google directly, with the PKCE verifier.
+ * 3. Supabase verifies the ID token and issues its session (cookies).
+ * 4. Google's *refresh* token is encrypted and stored so background sync can
+ *    reach Gmail without the user present.
  *
- * The redirect target is derived from our own origin, never from a query
- * parameter, so this cannot be turned into an open redirect.
+ * Every redirect is built from our own origin, never from a query parameter,
+ * so this cannot be turned into an open redirect.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { encryptSecret } from '@/lib/crypto';
+import { googleClient, OAUTH_COOKIE, OAUTH_COOKIE_PATH, readAttempt } from '@/lib/oauth';
 import { adminClient, serverClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get('code');
-  const oauthError = request.nextUrl.searchParams.get('error_description');
+  const params = request.nextUrl.searchParams;
   const origin = request.nextUrl.origin;
 
-  if (oauthError) {
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(oauthError)}`);
+  const finish = (path: string) => {
+    const response = NextResponse.redirect(`${origin}${path}`);
+    response.cookies.set(OAUTH_COOKIE, '', { path: OAUTH_COOKIE_PATH, maxAge: 0 });
+    return response;
+  };
+  const fail = (message: string) => finish(`/login?error=${encodeURIComponent(message)}`);
+
+  const denied = params.get('error');
+  if (denied) {
+    return fail(denied === 'access_denied' ? 'Google sign-in was cancelled.' : `Google sign-in failed (${denied}).`);
   }
-  if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+
+  const code = params.get('code');
+  const verifier = readAttempt(request.cookies.get(OAUTH_COOKIE)?.value, params.get('state'));
+  if (!code || !verifier) {
+    return fail('That sign-in link expired or was started in another tab. Please try again.');
   }
+
+  let tokens;
+  try {
+    ({ tokens } = await googleClient(origin).getToken({ code, codeVerifier: verifier }));
+  } catch (caught) {
+    console.error('[auth] Google code exchange failed:', (caught as Error).message);
+    return fail('Google sign-in could not be completed. Please try again.');
+  }
+  if (!tokens.id_token) return fail('Google did not return an identity. Please try again.');
 
   const supabase = await serverClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error || !data.session || !data.user) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(error?.message ?? 'exchange_failed')}`,
-    );
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'google',
+    token: tokens.id_token,
+    access_token: tokens.access_token ?? undefined,
+  });
+  if (error || !data.user) {
+    console.error('[auth] Supabase rejected the Google ID token:', error?.message);
+    return fail('Sign-in could not be completed. Please try again.');
   }
 
-  // Persist Google's refresh token, encrypted. It is only present on the first
-  // consent; on later sign-ins Supabase returns none, so an absent value must
-  // not overwrite what we already hold.
-  const refreshToken = (data.session as any).provider_refresh_token as string | undefined;
-  if (refreshToken) {
+  // Google returns a refresh token on consent (prompt=consent asks every time);
+  // an absent value must still not overwrite what we already hold.
+  if (tokens.refresh_token) {
     try {
-      const db = adminClient();
-      await db
+      await adminClient()
         .from('profiles')
         .upsert(
           {
             id: data.user.id,
             email: data.user.email ?? '',
             full_name: (data.user.user_metadata?.full_name as string) ?? '',
-            google_refresh_token_enc: encryptSecret(refreshToken),
+            google_refresh_token_enc: encryptSecret(tokens.refresh_token),
           },
           { onConflict: 'id' },
         );
@@ -59,5 +80,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/app`);
+  return finish('/app');
 }

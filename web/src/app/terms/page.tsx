@@ -26,7 +26,8 @@ export default function TermsPage() {
       <section className="marketing-section">
         <div className="prose">
           <h1>Terms of Service</h1>
-          <p className="muted small">Last updated: {new Date().toISOString().slice(0, 10)}</p>
+          {/* A real revision date: change it whenever this text changes. */}
+          <p className="muted small">Last updated: 18 November 2026</p>
 
           <div className="callout">
             <p>
@@ -47,7 +48,9 @@ export default function TermsPage() {
           <p>
             The Service connects to your Google account to read mail and calendar data, and presents
             derived information: triaged mail, extracted commitments, and a suggested reply
-            schedule. It is an assistive tool. It does not send email on your behalf.
+            schedule. It is an assistive tool. It can send a reply from your own Gmail account, but
+            only when you press Send on a message you have written or reviewed; it never sends
+            anything by itself. You are responsible for the messages you send.
           </p>
 
           <h2>3. Your account</h2>

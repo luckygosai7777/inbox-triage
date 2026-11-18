@@ -729,35 +729,3 @@ export async function syncCalendar(userId: string, day = new Date()): Promise<nu
   if (rows.length) await db.from('calendar_slots').insert(rows);
   return rows.length;
 }
-
-// ----------------------------------------------------------------- actions
-
-export async function archiveThread(userId: string, gmailThreadId: string): Promise<boolean> {
-  const gmail = await gmailFor(userId);
-  try {
-    await gmail.users.threads.modify({
-      userId: 'me',
-      id: gmailThreadId,
-      requestBody: { removeLabelIds: ['INBOX'] },
-    });
-    return true;
-  } catch (error) {
-    console.warn('[gmail] archive failed:', (error as Error).message);
-    return false;
-  }
-}
-
-export async function trashMessages(userId: string, gmailMessageIds: string[]): Promise<number> {
-  if (!gmailMessageIds.length) return 0;
-  const gmail = await gmailFor(userId);
-  let moved = 0;
-  for (const id of gmailMessageIds) {
-    try {
-      await gmail.users.messages.trash({ userId: 'me', id });
-      moved += 1;
-    } catch (error) {
-      console.warn('[gmail] trash failed:', (error as Error).message);
-    }
-  }
-  return moved;
-}

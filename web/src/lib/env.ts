@@ -47,12 +47,16 @@ const schema = z.object({
     .default('true')
     .transform((v) => v.toLowerCase() !== 'false'),
 
-  // --- Gemini (the no-cost option) ----------------------------------------
-  // Google's free tier has no card attached, which is the whole point of it
-  // being here. Read the privacy note in README before pointing a real
-  // mailbox at it: on the FREE tier Google may use the content for product
-  // improvement, and the content here is other people's email.
+  // --- Gemini ---------------------------------------------------------------
+  // Only used once GEMINI_PAID_TIER=true. On the free tier Google uses what it
+  // is sent to improve its products and lets human reviewers read it; sending
+  // Gmail content there breaks Google's Limited Use rules and our own privacy
+  // policy. Enable billing on the key's project first, then set the flag.
   GEMINI_API_KEY: trimmed().default(''),
+  GEMINI_PAID_TIER: z
+    .string()
+    .default('false')
+    .transform((v) => v.toLowerCase() === 'true'),
   // Empty on purpose: the model is discovered from the catalogue the key can
   // actually see. A default here is a guess about a remote list that Google
   // changes, and a wrong guess is a 404 with no way for the user to know what
