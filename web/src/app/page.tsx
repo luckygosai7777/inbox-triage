@@ -3,6 +3,23 @@ import type { Metadata } from 'next';
 
 import MarketingNav from '@/components/MarketingNav';
 import Footer from '@/components/Footer';
+import IntroGate from '@/components/public/IntroGate';
+import Paper, { PAPER_VIEWPORT } from '@/components/public/Paper';
+import {
+  Chapter,
+  CompareTable,
+  ConnectViz,
+  ExtractViz,
+  Faq,
+  LandingHero,
+  ListViz,
+  ProblemCards,
+  ScheduleViz,
+  SectionIntro,
+  TrustGrid,
+  type TrustIcon,
+} from '@/components/public/sections';
+import { ScrollType } from '@/components/public/type';
 
 export const metadata: Metadata = {
   title: 'Owed — the to-do list you never had to write',
@@ -17,19 +34,33 @@ export const metadata: Metadata = {
   },
 };
 
-const STEPS = [
+export const viewport = PAPER_VIEWPORT;
+
+const PROBLEMS = [
   {
-    n: '1',
-    title: 'Connect Gmail',
-    body: 'One sign-in. We read your mail and calendar. We never send anything on your behalf — every send is a click you make inside Gmail.',
+    title: 'The sentence you forgot',
+    body: '“I’ll circle back with numbers on Monday.” You meant it. Monday came and went. The only record is buried in a thread you have no reason to reopen.',
   },
   {
-    n: '2',
+    title: 'The chase you didn’t notice',
+    body: 'Someone asked you something twelve days ago. It scrolled off the first screen and out of your memory. They are still waiting, and getting a slightly worse impression of you each day.',
+  },
+  {
+    title: 'The day that never had room',
+    body: 'You planned to “catch up on email today”. You had 43 minutes of gaps and four hours of replies. Nobody told you that until 6pm.',
+  },
+];
+
+const STEPS = [
+  {
+    title: 'Connect Gmail',
+    body: 'One sign-in. We read your mail and calendar, and nothing is ever sent unless you write it, read it and press Send.',
+  },
+  {
     title: 'We read what you sent',
     body: 'Not just your inbox — your sent folder. That is where "I\'ll get you the deck by Friday" is buried, and where every other tool stops looking.',
   },
   {
-    n: '3',
     title: 'You get one list',
     body: 'Everything you owe, ordered by how late it is, each row quoting the sentence you actually wrote. Nothing to type, nothing to maintain.',
   },
@@ -40,6 +71,39 @@ const COMPARISON = [
   ['Boomerang', 'Nags when nobody replies to you', 'The opposite direction'],
   ['Superhuman / Shortwave', 'Faster triage, AI summaries', 'Still only inbound mail'],
   ['Todoist / Things', 'Tracks what you typed in', 'You have to remember to type it'],
+] as const;
+
+const TRUST: { icon: TrustIcon; title: string; body: string }[] = [
+  {
+    icon: 'send',
+    title: 'It never sends by itself',
+    body: 'You can write and send a reply here, from your own account. Nothing automated can: no scheduled send, no auto-reply, no path to your contacts that does not go through you pressing send on a message you have read.',
+  },
+  {
+    icon: 'key',
+    title: 'Your tokens are encrypted',
+    body: 'The key to your mailbox is encrypted with AES-256-GCM before it is stored. The database only ever holds ciphertext.',
+  },
+  {
+    icon: 'database',
+    title: 'Isolated at the database',
+    body: 'Row-level security means the database itself refuses to return another account’s rows — not just the app code.',
+  },
+  {
+    icon: 'guess',
+    title: 'It refuses to guess',
+    body: 'A deadline is only shown when a real date parser confirmed it. Otherwise it says so. An AI that invents due dates is worse than none.',
+  },
+  {
+    icon: 'training',
+    title: 'No training on your mail',
+    body: 'Your email is never used to train models, never sold, never shared with anyone.',
+  },
+  {
+    icon: 'leave',
+    title: 'Leave whenever',
+    body: 'One button deletes every row and revokes access. No retention window, no support ticket.',
+  },
 ];
 
 const FAQ = [
@@ -67,271 +131,94 @@ const FAQ = [
 
 export default function LandingPage() {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+    <Paper intro>
       <MarketingNav />
 
-      {/* ------------------------------------------------------------ hero */}
-      <section className="marketing-section" style={{ paddingTop: 72, paddingBottom: 56 }}>
-        <div className="marketing-wrap">
-          <span className="eyebrow">For people who answer a lot of email</span>
+      <IntroGate>
+        <main className="tw-root tw:text-base tw:leading-normal">
+          <LandingHero />
 
-          <h1 className="hero-title">
-            You don’t have an inbox problem.
-            <br />
-            You have a <span style={{ color: 'var(--accent)' }}>promises</span> problem.
-          </h1>
+          {/* ------------------------------------------------------- problem */}
+          <section className="tw:py-16 tw:lg:py-24">
+            <SectionIntro
+              title="Your to-do list is missing half your work"
+              body="Todo apps only know what you typed into them. But most of what you owe was never typed anywhere — it was said in passing, in an email, three weeks ago."
+            />
+            <ProblemCards cards={PROBLEMS} />
+          </section>
 
-          <p className="hero-sub">
-            You wrote “I’ll send it Friday” and moved on. That sentence is now sitting in your Sent
-            folder, where nobody will ever read it again — including you. Owed reads it,
-            and hands you the list.
-          </p>
+          {/* -------------------------------------------------- how it works */}
+          <section className="tw:pt-16 tw:lg:pt-24">
+            <SectionIntro id="how" title="How it works" />
+            <Chapter n={1} title={STEPS[0].title} body={STEPS[0].body}>
+              <ConnectViz />
+            </Chapter>
+            <Chapter n={2} flip title={STEPS[1].title} body={STEPS[1].body}>
+              <ExtractViz />
+            </Chapter>
+            <Chapter n={3} title={STEPS[2].title} body={STEPS[2].body}>
+              <ListViz />
+              <ScheduleViz />
+            </Chapter>
+          </section>
 
-          <div className="row wrap gap-12" style={{ marginTop: 32 }}>
-            <Link href="/login" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-              Continue with Google
-            </Link>
-            <Link href="/pricing" className="btn" style={{ textDecoration: 'none' }}>
-              See pricing
-            </Link>
-          </div>
+          {/* ---------------------------------------------------- comparison */}
+          <section className="tw:py-16 tw:lg:py-24">
+            <SectionIntro
+              title="Why not just use what you have?"
+              body="Every one of these is good at something. None of them read your sent mail."
+            />
+            <CompareTable rows={COMPARISON} />
+          </section>
 
-          <p className="tiny muted" style={{ marginTop: 14 }}>
-            Free to start · Never sends mail on your behalf · Delete everything in one click
-          </p>
+          {/* --------------------------------------------------------- trust */}
+          <section className="tw:py-16 tw:lg:py-24">
+            <SectionIntro
+              title="Built to be trusted with your mail"
+              body="You are handing over correspondence. Here is exactly what happens to it."
+            />
+            <TrustGrid items={TRUST} />
+            <p className="tw:mx-auto tw:mt-8 tw:max-w-6xl tw:px-6 tw:text-sm tw:text-ink-soft">
+              Full detail in the{' '}
+              <Link href="/privacy" className="tw:underline tw:underline-offset-4">
+                privacy policy
+              </Link>
+              .
+            </p>
+          </section>
 
-          {/* A picture of the product beats a description of it. */}
-          <div className="hero-shot">
-            <div className="row gap-8" style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-light)' }}>
-              <span className="dot" style={{ background: '#f87171' }} />
-              <span className="dot" style={{ background: '#f5c451' }} />
-              <span className="dot" style={{ background: '#4ade9b' }} />
-              <span className="mono tiny muted" style={{ marginLeft: 8 }}>
-                what you owe
-              </span>
-            </div>
+          {/* ----------------------------------------------------------- faq */}
+          <section className="tw:mx-auto tw:max-w-3xl tw:px-6 tw:py-16 tw:lg:py-24">
+            <ScrollType
+              as="h2"
+              text="Questions"
+              className="tw:font-serif tw:text-[2.1rem] tw:font-semibold tw:tracking-tight tw:text-ink tw:sm:text-5xl"
+            />
+            <Faq items={FAQ} />
+          </section>
 
-            <div style={{ padding: 20 }}>
-              <div className="row gap-12" style={{ alignItems: 'baseline' }}>
-                <span className="metric-number">7</span>
-                <span className="h2" style={{ fontSize: 16 }}>
-                  things you owe people
-                </span>
-              </div>
-              <div className="small mt-4" style={{ color: 'var(--danger)', fontWeight: 600 }}>
-                3 of these are already late
-              </div>
-
-              <div className="stack gap-8" style={{ marginTop: 18 }}>
-                {[
-                  {
-                    what: 'Send the revised deck',
-                    when: '2 days late',
-                    who: 'You told Maya Okonkwo you would',
-                    quote: '“I’ll send the revised deck by Friday, once legal have looked at section 4.”',
-                    late: true,
-                  },
-                  {
-                    what: 'Accept or decline the Nov 14 keynote',
-                    when: 'Was due yesterday',
-                    who: 'Tom Bekele asked and you haven’t replied',
-                    quote: '“Need an answer by Friday so we can lock the running order.”',
-                    late: true,
-                  },
-                  {
-                    what: 'Review the rebrand scope doc',
-                    when: 'No deadline given',
-                    who: 'You told Ravi Menon you would',
-                    quote: '“I’ll review the scope doc and get back to you with comments.”',
-                    late: false,
-                  },
-                ].map((row) => (
-                  <div key={row.what} className="shot-row">
-                    <span
-                      className="ledger-rail"
-                      style={{ background: row.late ? 'var(--danger)' : 'var(--text-faint)' }}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <div className="row wrap gap-8" style={{ alignItems: 'baseline' }}>
-                        <span className="small" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {row.what}
-                        </span>
-                        <span
-                          className="small"
-                          style={{
-                            fontWeight: 600,
-                            color: row.late ? 'var(--danger)' : 'var(--text-faint)',
-                          }}
-                        >
-                          {row.when}
-                        </span>
-                      </div>
-                      <div className="tiny muted mt-4">{row.who}</div>
-                      <div className="evidence">{row.quote}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* --------------------------------------------------------- problem */}
-      <section className="marketing-section band">
-        <div className="marketing-wrap">
-          <h2 className="section-title">Your to-do list is missing half your work</h2>
-          <p className="section-sub">
-            Todo apps only know what you typed into them. But most of what you owe was never typed
-            anywhere — it was said in passing, in an email, three weeks ago.
-          </p>
-
-          <div className="feature-grid" style={{ marginTop: 36 }}>
-            <div className="card card-pad">
-              <div className="h3">The sentence you forgot</div>
-              <p className="small secondary mt-8">
-                “I’ll circle back with numbers on Monday.” You meant it. Monday came and went. The
-                only record is buried in a thread you have no reason to reopen.
+          {/* ----------------------------------------------------------- cta */}
+          <section className="tw:px-6 tw:pb-28 tw:pt-8">
+            <div className="tw:mx-auto tw:max-w-4xl tw:rounded-3xl tw:bg-sheet tw:px-6 tw:py-14 tw:text-center tw:shadow-xl tw:shadow-[#5b4520]/10 tw:sm:px-12">
+              <ScrollType
+                as="h2"
+                text="Find out what you’ve forgotten"
+                from="start 95%"
+                to="start 60%"
+                className="tw:font-serif tw:text-[2rem] tw:font-semibold tw:leading-tight tw:tracking-tight tw:text-ink tw:sm:text-[2.6rem]"
+              />
+              <p className="tw:mx-auto tw:mt-4 tw:max-w-xl tw:text-lg tw:leading-8 tw:text-ink-soft">
+                Most people are surprised by the first list. Takes about a minute to find out.
               </p>
+              <Link href="/login" className="btn btn-primary tw:mt-8 tw:px-6 tw:py-3 tw:text-base">
+                Continue with Google
+              </Link>
             </div>
-            <div className="card card-pad">
-              <div className="h3">The chase you didn’t notice</div>
-              <p className="small secondary mt-8">
-                Someone asked you something twelve days ago. It scrolled off the first screen and
-                out of your memory. They are still waiting, and getting a slightly worse impression
-                of you each day.
-              </p>
-            </div>
-            <div className="card card-pad">
-              <div className="h3">The day that never had room</div>
-              <p className="small secondary mt-8">
-                You planned to “catch up on email today”. You had 43 minutes of gaps and four hours
-                of replies. Nobody told you that until 6pm.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------ how it works */}
-      <section className="marketing-section">
-        <div className="marketing-wrap">
-          <h2 className="section-title">How it works</h2>
-          <div className="feature-grid" style={{ marginTop: 36 }}>
-            {STEPS.map((step) => (
-              <div key={step.n} className="card card-pad">
-                <span className="step-badge">{step.n}</span>
-                <div className="h3 mt-12">{step.title}</div>
-                <p className="small secondary mt-8">{step.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------- comparison */}
-      <section className="marketing-section band">
-        <div className="marketing-wrap">
-          <h2 className="section-title">Why not just use what you have?</h2>
-          <p className="section-sub">
-            Every one of these is good at something. None of them read your sent mail.
-          </p>
-
-          <div className="scroll-x" style={{ marginTop: 28 }}>
-            <table className="compare">
-              <thead>
-                <tr>
-                  <th>Tool</th>
-                  <th>What it does well</th>
-                  <th>What it misses</th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARISON.map(([tool, does, misses]) => (
-                  <tr key={tool}>
-                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tool}</td>
-                    <td className="secondary">{does}</td>
-                    <td className="muted">{misses}</td>
-                  </tr>
-                ))}
-                <tr className="highlight">
-                  <td style={{ fontWeight: 700, color: 'var(--accent)' }}>Owed</td>
-                  <td style={{ color: 'var(--text-primary)' }}>
-                    Reads your sent mail for promises you made
-                  </td>
-                  <td className="secondary">Still needs you to press Send</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------ trust */}
-      <section className="marketing-section">
-        <div className="marketing-wrap">
-          <h2 className="section-title">Built to be trusted with your mail</h2>
-          <p className="section-sub">
-            You are handing over correspondence. Here is exactly what happens to it.
-          </p>
-
-          <div className="feature-grid" style={{ marginTop: 36 }}>
-            {[
-              ['It never sends by itself', 'You can write and send a reply here, from your own account. Nothing automated can: no scheduled send, no auto-reply, no path to your contacts that does not go through you pressing send on a message you have read.'],
-              ['Your tokens are encrypted', 'The key to your mailbox is encrypted with AES-256-GCM before it is stored. The database only ever holds ciphertext.'],
-              ['Isolated at the database', 'Row-level security means the database itself refuses to return another account’s rows — not just the app code.'],
-              ['It refuses to guess', 'A deadline is only shown when a real date parser confirmed it. Otherwise it says so. An AI that invents due dates is worse than none.'],
-              ['No training on your mail', 'Your email is never used to train models, never sold, never shared with anyone.'],
-              ['Leave whenever', 'One button deletes every row and revokes access. No retention window, no support ticket.'],
-            ].map(([title, body]) => (
-              <div key={title} className="card card-pad">
-                <div className="h3">{title}</div>
-                <p className="small secondary mt-8">{body}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="small muted" style={{ marginTop: 24 }}>
-            Full detail in the <Link href="/privacy">privacy policy</Link>.
-          </p>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------------- faq */}
-      <section className="marketing-section band">
-        <div className="marketing-wrap" style={{ maxWidth: 760 }}>
-          <h2 className="section-title">Questions</h2>
-          <div className="stack gap-12" style={{ marginTop: 28 }}>
-            {FAQ.map((item) => (
-              <details key={item.q} className="faq">
-                <summary>{item.q}</summary>
-                <p className="small secondary" style={{ marginTop: 10, lineHeight: 1.7 }}>
-                  {item.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* --------------------------------------------------------------- cta */}
-      <section className="marketing-section">
-        <div className="marketing-wrap" style={{ textAlign: 'center' }}>
-          <h2 className="section-title" style={{ marginInline: 'auto' }}>
-            Find out what you’ve forgotten
-          </h2>
-          <p className="section-sub" style={{ marginInline: 'auto' }}>
-            Most people are surprised by the first list. Takes about a minute to find out.
-          </p>
-          <div className="row gap-12" style={{ justifyContent: 'center', marginTop: 28 }}>
-            <Link href="/login" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-              Continue with Google
-            </Link>
-          </div>
-        </div>
-      </section>
+          </section>
+        </main>
+      </IntroGate>
 
       <Footer />
-    </div>
+    </Paper>
   );
 }

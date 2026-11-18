@@ -3,7 +3,7 @@ import { IBM_Plex_Mono, Inter, Space_Grotesk } from 'next/font/google';
 import { connection } from 'next/server';
 
 import { appUrl } from '@/lib/url';
-import '@/styles/global.css';
+import '@/styles/index.css';
 
 // Space Grotesk for display: a grotesk with enough character to carry a headline
 // on a dark ground, where a neutral face disappears. Inter for reading, because

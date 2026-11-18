@@ -1,0 +1,253 @@
+/*
+ * Entry stylesheet: Owed's own CSS (global.css) plus the Tailwind utilities and beige "paper"
+ * theme the public pages are built with.
+ *
+ * Cascade layers decide who wins, whatever the selector specificity:
+ *
+ *   reset   browser defaults zeroed, only inside .tw-root (the Tailwind-built regions)
+ *   owed    global.css: everything the signed-in app is built from
+ *   paper   the beige theme, active only while a .paper element is on the page
+ *   theme, base, components, utilities   Tailwind
+ *
+ * global.css used to be unlayered. Layering it changes nothing inside the app, because its rules
+ * keep their order among themselves, but it lets a utility beat one of its element rules such as
+ * `a { color }`. Unlayered CSS would beat every layer.
+ *
+ * Tailwind is prefixed (tw:flex, --tw-*), so no utility or theme variable can collide with
+ * global.css's own .mt-4, .btn, --radius-lg and friends. Its preflight is not imported: it would
+ * restyle every element in the app. .tw-root gets the few resets the public pages rely on.
+ */
+@layer reset, owed, paper, theme, base, components, utilities;
+
+@import './global.css' layer(owed);
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) source('..');
+
+/* The palette lives in plain custom properties (set below), so utilities and inline SVG strokes
+   read the same values. `inline` makes tw:bg-paper emit var(--paper) itself, resolved on the
+   element, which is what lets the next/font variables set on .paper reach the font stacks. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-check: var(--check);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-bad: var(--bad);
+  --color-series: var(--series);
+  --color-series-muted: var(--series-muted);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, serif;
+
+  --animate-caret: caret 1.05s steps(1) infinite;
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* What Tailwind's preflight would have done, for the elements the public pages use. :where()
+   keeps it at zero specificity, and the layer puts it under global.css, so .btn and friends win. */
+@layer reset {
+  .tw-root :where(h1, h2, h3, h4, p, ul, ol, li, figure, blockquote) {
+    margin: 0;
+    padding: 0;
+  }
+  .tw-root :where(h1, h2, h3, h4) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  .tw-root :where(ul, ol) {
+    list-style: none;
+  }
+  .tw-root :where(button) {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .tw-root :where(table) {
+    border-collapse: collapse;
+    text-indent: 0;
+  }
+  .tw-root :where(th) {
+    font-weight: inherit;
+    text-align: inherit;
+  }
+  .tw-root :where(mark) {
+    background: none;
+    color: inherit;
+  }
+  .tw-root :where(svg, img, canvas) {
+    display: block;
+    vertical-align: middle;
+  }
+}
+
+/*
+ * PAPER: warm beige for the public pages (/, /pricing, /privacy, /terms, /login, 404).
+ *
+ * The signed-in app keeps Aurora. Rather than threading a theme through every page, the theme
+ * switches on while a .paper element is in the document, so a client navigation into /app turns it
+ * off again with nothing to clean up. Text contrast is checked on paper and on sheet; ink-faint is
+ * the floor at 4.65:1.
+ */
+@layer paper {
+  :root:has(.paper) {
+    --paper: #f3ece0;
+    --sheet: #fbf8f2;
+    --ink: #1b1828;
+    --ink-soft: #5e5668;
+    --ink-faint: #6f6678;
+    --rule: #e3d7c3;
+    --accent-soft: #e9dfcc;
+    --check: #1e9e6a; /* the logo's check, deepened for a light ground */
+    --ok: #1f7a55;
+    --ok-soft: #dcebdd;
+    --warn: #8a5a00;
+    --bad: #a63a2b;
+    --bad-soft: #f5ddd5;
+    /* Charts: one series in a deepened violet; the muted grey sits under 3:1, so it always
+       carries a visible label. */
+    --series: #6a52d6;
+    --series-muted: #cbbfab;
+
+    /* global.css's own tokens, so pages built from its classes turn beige as well. */
+    --bg-page: var(--paper);
+    --bg-deep: #e9dfcc;
+    --bg-primary: var(--sheet);
+    --bg-secondary: var(--sheet);
+    --bg-tertiary: #efe6d6;
+    --bg-hover: rgba(43, 38, 69, 0.05);
+    --bg-stripe: rgba(43, 38, 69, 0.025);
+    --bg-chip: rgba(43, 38, 69, 0.06);
+    --text-primary: var(--ink);
+    --text-body: #3a3446;
+    --text-secondary: var(--ink-soft);
+    --text-tertiary: var(--ink-faint);
+    --text-faint: var(--ink-faint);
+    --border-light: var(--rule);
+    --border-medium: #d6c7ae;
+    --border-strong: #bba98c;
+    --border-input: #d6c7ae;
+    --border-row: #ebe1d0;
+    --border-danger: rgba(166, 58, 43, 0.35);
+    --accent: #2b2645;
+    --accent-hover: #1d1932;
+    --accent-active: #15122a;
+    --accent-ink: #ffffff;
+    --accent-wash: var(--accent-soft);
+    --gradient: linear-gradient(135deg, #2b2645 0%, #3f3768 100%);
+    --danger: var(--bad);
+    --danger-wash: var(--bad-soft);
+    --danger-border: rgba(166, 58, 43, 0.3);
+    --warning: var(--warn);
+    --success: var(--ok);
+    --edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --shadow-sm: 0 1px 2px rgba(91, 69, 32, 0.08);
+    --shadow: 0 8px 24px rgba(91, 69, 32, 0.1);
+    --shadow-lift: 0 18px 48px rgba(91, 69, 32, 0.16);
+    --glow: 0 6px 18px rgba(43, 38, 69, 0.22);
+    --logo-ink: var(--ink);
+    --logo-check: var(--check);
+    --logo-disc: rgba(30, 158, 106, 0.14);
+    color-scheme: light;
+    /* The intro locks scrolling; without a reserved gutter the page would shift sideways when
+       the scrollbar comes back, right after the letter has lined up with it. */
+    scrollbar-gutter: stable;
+  }
+
+  /* Aurora's drifting light and grain are for the dark app. */
+  :root:has(.paper) body::before,
+  :root:has(.paper) body::after {
+    display: none;
+  }
+
+  /* The element that carries the next/font classes, so these resolve here, not on :root. */
+  .paper {
+    --font-body: var(--font-plex-sans), system-ui, sans-serif;
+    --font-display: var(--font-source-serif), Georgia, serif;
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--text-body);
+    font-family: var(--font-body);
+  }
+  /* global.css rings buttons and inputs; the public pages are mostly links. */
+  .paper a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .paper ::selection {
+    background: var(--accent-soft);
+  }
+  /* global.css hard-codes dark text for the violet gradient; navy needs white. */
+  .paper .btn-primary,
+  .paper .btn-primary:hover:not(:disabled) {
+    color: #fff;
+  }
+
+  /* Typewriter text: the untyped rest is laid out but invisible. Shown in full with reduced motion,
+     and without JavaScript (the inline script in Paper sets data-js before first paint). */
+  .typed-rest {
+    color: transparent;
+  }
+  html:not([data-js]) .typed-rest {
+    color: inherit;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .typed-rest {
+      color: inherit;
+    }
+  }
+
+  /* Without JavaScript nothing would ever animate in: show what motion left hidden. */
+  html:not([data-js]) .paper [style*='opacity'] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  html:not([data-js]) .paper [data-faq-panel] {
+    height: auto !important;
+  }
+  /* CountUp: the final value is screen-reader text when the count can run, the number itself
+     when it cannot. */
+  html[data-js] .count-final {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  html:not([data-js]) .count-live {
+    display: none;
+  }
+
+  /* Covers the page from first paint while the mail intro is due (data-intro set by the inline
+     script), and stands in while its chunk loads. Same light as the intro's own backdrop. */
+  .intro-cover {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: radial-gradient(ellipse at 50% 42%, #fbf6ec 0%, #efe5d3 55%, #e2d4bb 100%);
+  }
+  html[data-intro='play'] .intro-cover,
+  .intro-cover.is-on {
+    display: block;
+  }
+  html[data-intro='play'],
+  html[data-intro='running'] {
+    overflow: hidden;
+  }
+}

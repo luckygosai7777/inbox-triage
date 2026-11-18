@@ -293,6 +293,27 @@ ran. An empty commit re-fires it.
 
 ## The look
 
+Two themes: **Paper** on the public pages, **Aurora** in the signed-in app.
+
+**Paper** (/, /pricing, /privacy, /terms, /login, 404) — warm beige `#F3ECE0`,
+ivory `#FBF8F2` surfaces, ink `#1B1828`, navy `#2B2645` accent, the logo's
+green `#1E9E6A` for checks, violet `#6A52D6` for charts and the one emphasised
+word. Source Serif 4 headings, IBM Plex Sans body, Space Grotesk only in the
+wordmark (the logo's ring is the "O"). No ruled lines anywhere. It switches on
+while a `.paper` element is on the page (`src/styles/index.css`), so the app's
+CSS is untouched. Built with Tailwind v4 utilities, prefixed `tw:` and without
+preflight; `global.css` sits in a cascade layer beneath them.
+
+The landing page opens with a three.js mail intro (`components/public/intro/`):
+an envelope with an Owed wax seal opens, the letter rises and the camera dives
+into it until it is the page. Once per browser session, Esc or Skip ends it,
+and it never plays under reduced motion or without WebGL. An inline script
+(with the CSP nonce) decides before first paint, so the page never flashes
+first. The letter is drawn at the screen's proportions with the logo where the
+header's real one is measured, so the handoff lines up at any width. Headings
+type as they scroll into view; every typed line has a screen-reader copy, and
+everything shows in full without JavaScript.
+
 **Aurora** — near-black `#08080C` under a slowly drifting gradient, translucent
 white surfaces that pick up the colour beneath them, violet `#8B6CFF` as the
 only brand colour with cyan appearing beside it in gradients. Space Grotesk for

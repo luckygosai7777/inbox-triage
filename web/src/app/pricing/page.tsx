@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
+import Paper, { PAPER_VIEWPORT } from '@/components/public/Paper';
+import { Faq, PricingCards, type Plan } from '@/components/public/sections';
+import { ScrollType, TypeOnce } from '@/components/public/type';
 
 export const metadata: Metadata = {
   title: 'Pricing — Owed',
   description: 'Free forever on the rules engine. ₹499 a month when you want the model.',
   robots: { index: true, follow: true },
 };
+
+export const viewport = PAPER_VIEWPORT;
 
 /*
  * WHAT A USER ACTUALLY COSTS
@@ -47,10 +51,10 @@ export const metadata: Metadata = {
  * rules, paid gets the model. Ten drafts a month on the house so the thing
  * can be judged before it is bought (₹8 of cost, the cheapest trial there is).
  */
-const PLANS = [
+const PLANS: Plan[] = [
   {
     name: 'Free',
-    price: '₹0',
+    price: 0,
     cadence: 'forever',
     pitch: 'The rules engine, in full. No card, no trial clock.',
     cta: 'Start free',
@@ -68,7 +72,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '₹499',
+    price: 499,
     cadence: 'per month',
     pitch: 'For people whose reputation runs on replying.',
     cta: 'Start free, upgrade later',
@@ -86,7 +90,7 @@ const PLANS = [
   },
   {
     name: 'Studio',
-    price: '₹1,299',
+    price: 1299,
     cadence: 'per month',
     pitch: 'When you answer the same question forty times a week.',
     cta: 'Talk to us',
@@ -137,80 +141,43 @@ const FAQ = [
 
 export default function PricingPage() {
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
+    <Paper>
       <MarketingNav />
 
-      <section className="marketing-section" style={{ paddingBottom: 40 }}>
-        <div className="marketing-wrap">
-          <span className="eyebrow">Pricing</span>
-          <h1 className="hero-title" style={{ fontSize: 'clamp(30px, 4.4vw, 46px)' }}>
-            Less than one missed reply
-          </h1>
-          <p className="hero-sub">
+      <main className="tw-root tw:text-base tw:leading-normal">
+        <section className="tw:mx-auto tw:max-w-6xl tw:px-6 tw:pb-16 tw:pt-10 tw:lg:pt-16">
+          <p className="tw:text-sm tw:font-medium tw:text-ink-soft">Pricing</p>
+          <TypeOnce
+            as="h1"
+            start
+            cps={30}
+            text="Less than one missed reply"
+            className="tw:mt-4 tw:font-serif tw:text-[2.4rem] tw:font-semibold tw:leading-[1.1] tw:tracking-tight tw:text-ink tw:sm:text-[3.2rem]"
+          />
+          <p className="tw:mt-5 tw:max-w-2xl tw:text-lg tw:leading-8 tw:text-ink-soft">
             One forgotten promise costs more than a year of this. Start free — you only find out
             whether it is worth paying for after you see your first list.
           </p>
 
-          <div className="price-grid">
-            {PLANS.map((plan) => (
-              <div key={plan.name} className={plan.featured ? 'price-card featured' : 'price-card'}>
-                {plan.featured && (
-                  <span className="eyebrow" style={{ marginBottom: 14 }}>
-                    Most popular
-                  </span>
-                )}
-                <div className="h3">{plan.name}</div>
-                <div className="row gap-8 mt-12" style={{ alignItems: 'baseline' }}>
-                  <span className="price-amount">{plan.price}</span>
-                  <span className="small muted">{plan.cadence}</span>
-                </div>
-                <p className="small secondary" style={{ marginTop: 10, minHeight: 40 }}>
-                  {plan.pitch}
-                </p>
+          <PricingCards plans={PLANS} />
 
-                <Link
-                  href="/login"
-                  className={plan.featured ? 'btn btn-primary btn-block' : 'btn btn-block'}
-                  style={{ textDecoration: 'none', marginTop: 4 }}
-                >
-                  {plan.cta}
-                </Link>
-
-                <ul className="price-list">
-                  {plan.features.map(([label, on]) => (
-                    <li key={label} className={on ? '' : 'off'}>
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <p className="small muted" style={{ marginTop: 24 }}>
+          <p className="tw:mt-8 tw:text-sm tw:text-ink-soft">
             Prices in Indian rupees, exclusive of GST. Pay by UPI, card or net banking. Cancel any
             time from Settings. Two months free on annual plans.
           </p>
-        </div>
-      </section>
+        </section>
 
-      <section className="marketing-section band">
-        <div className="marketing-wrap" style={{ maxWidth: 760 }}>
-          <h2 className="section-title">Pricing questions</h2>
-          <div className="stack gap-12" style={{ marginTop: 28 }}>
-            {FAQ.map((item) => (
-              <details key={item.q} className="faq">
-                <summary>{item.q}</summary>
-                <p className="small secondary" style={{ marginTop: 10, lineHeight: 1.7 }}>
-                  {item.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
+        <section className="tw:mx-auto tw:max-w-3xl tw:px-6 tw:pb-28 tw:pt-12">
+          <ScrollType
+            as="h2"
+            text="Pricing questions"
+            className="tw:font-serif tw:text-[2.1rem] tw:font-semibold tw:tracking-tight tw:text-ink tw:sm:text-5xl"
+          />
+          <Faq items={FAQ} />
+        </section>
+      </main>
 
       <Footer />
-    </div>
+    </Paper>
   );
 }

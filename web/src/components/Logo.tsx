@@ -84,7 +84,8 @@ export default function Logo({ size = 32, withWordmark = false, className }: Pro
           x="112"
           y="72"
           fill="var(--logo-ink, #f7f7fb)"
-          fontFamily="var(--font-display), Georgia, serif"
+          // Always the grotesk: the public pages set --font-display to a serif.
+          fontFamily="var(--font-grotesk), var(--font-display), sans-serif"
           fontSize="70"
           fontWeight="600"
           letterSpacing="-2"

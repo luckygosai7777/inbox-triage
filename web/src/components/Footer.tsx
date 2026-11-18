@@ -10,8 +10,7 @@ export default function Footer() {
       <div className="footer-grid">
         <div className="footer-col" style={{ maxWidth: 300 }}>
           <Link href="/" className="brand" style={{ marginBottom: 4 }}>
-            <Logo size={24} />
-            Owed
+            <Logo size={28} withWordmark />
           </Link>
           <p className="small muted" style={{ margin: 0, lineHeight: 1.6 }}>
             The to-do list you never had to write. Built from the promises already sitting in your
@@ -34,7 +33,7 @@ export default function Footer() {
 
       <div
         className="footer-grid"
-        style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border-light)' }}
+        style={{ marginTop: 32 }}
       >
         <span className="tiny muted">© {year} Owed. All rights reserved.</span>
         <span className="tiny muted">

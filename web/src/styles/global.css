@@ -1016,10 +1016,6 @@ a .card:hover,
 .scroll-y {
   overflow-y: auto;
 }
-.scroll-x {
-  overflow-x: auto;
-}
-
 .avatar {
   width: 22px;
   height: 22px;
@@ -1315,22 +1311,6 @@ a .card:hover,
 
 /* ==================================================== marketing site ==== */
 
-.marketing-nav {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 32px;
-  /* Translucent paper, so the page scrolls visibly underneath the bar. Written
-     as an rgba of --bg-page; it cannot be the variable itself because there is
-     no alpha to apply to it here. */
-  background: rgba(8, 8, 12, 0.72);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
-  border-bottom: 1px solid var(--border-light);
-}
 .brand {
   display: flex;
   align-items: center;
@@ -1341,219 +1321,15 @@ a .card:hover,
   font-weight: 600;
   font-size: 15px;
 }
-/* Retired with the letter-in-a-box logo — the mark is its own shape now and
-   a tile behind it only made it smaller. Kept as a no-op guard in case a
-   stray usage survives somewhere. */
-.brand-mark {
-  display: inline-flex;
-  align-items: center;
-}
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.nav-link {
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 12px;
-  border-radius: var(--radius-sm);
-  text-decoration: none;
-}
-.nav-link:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-
 .marketing-section {
   padding: 64px 32px;
 }
-.marketing-section.band {
-  background: var(--bg-primary);
-  border-block: 1px solid var(--border-light);
-}
-.marketing-wrap {
-  max-width: 1080px;
-  margin-inline: auto;
-}
-
-.eyebrow {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  background: var(--accent-wash);
-  border: 1px solid var(--accent);
-  padding: 5px 11px;
-  border-radius: var(--radius-pill);
-}
-
-.hero-title {
-  font-family: var(--font-display);
-  font-size: clamp(34px, 5.6vw, 60px);
-  line-height: 1.06;
-  letter-spacing: -0.03em;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 22px 0 0;
-  text-wrap: balance;
-}
-.hero-sub {
-  max-width: 620px;
-  font-size: 16px;
-  line-height: 1.65;
-  color: var(--text-secondary);
-  margin: 20px 0 0;
-  text-wrap: pretty;
-}
-
-.hero-shot {
-  margin-top: 48px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(60, 46, 30, 0.14);
-}
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.shot-row {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-}
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: clamp(24px, 3.2vw, 34px);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  max-width: 720px;
-  text-wrap: balance;
-}
-.section-sub {
-  max-width: 640px;
-  font-size: 15px;
-  line-height: 1.65;
-  color: var(--text-secondary);
-  margin: 14px 0 0;
-  text-wrap: pretty;
-}
-
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.step-badge {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--accent-wash);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.compare {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 560px;
-  font-size: 13px;
-}
-.compare th {
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-medium);
-}
-.compare td {
-  padding: 14px;
-  border-bottom: 1px solid var(--border-row);
-  vertical-align: top;
-}
-.compare tr.highlight td {
-  background: var(--accent-wash);
-  border-bottom: 0;
-}
-
-.faq {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-}
-.faq summary {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-.faq summary::-webkit-details-marker {
-  display: none;
-}
-.faq summary::after {
-  content: '+';
-  color: var(--accent);
-  font-size: 18px;
-  line-height: 1;
-  flex: none;
-}
-.faq[open] summary::after {
-  content: '−';
-}
-
-.price-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-top: 40px;
-  align-items: start;
-}
-.price-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-}
-.price-card.featured {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-.price-amount {
-  font-family: var(--font-display);
-  font-size: 38px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1;
-}
 .price-list {
   list-style: none;
   padding: 0;
@@ -1584,7 +1360,6 @@ a .card:hover,
 }
 
 .site-footer {
-  border-top: 1px solid var(--border-light);
   padding: 40px 32px;
   background: var(--bg-primary);
 }
@@ -1664,7 +1439,6 @@ a .card:hover,
 }
 
 @media (max-width: 619px) {
-  .marketing-nav,
   .marketing-section,
   .site-footer {
     padding-left: 16px;
@@ -1673,9 +1447,6 @@ a .card:hover,
   .marketing-section {
     padding-top: 48px;
     padding-bottom: 48px;
-  }
-  .nav-links .nav-link.hide-sm {
-    display: none;
   }
 }
 
