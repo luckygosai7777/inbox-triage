@@ -86,7 +86,7 @@ export default function LoginPage() {
         <ul className="small secondary" style={{ lineHeight: 1.8, paddingLeft: 18, marginTop: 12 }}>
           <li>Reads your sent mail to find promises you made</li>
           <li>Packs replies into the real gaps between your meetings</li>
-          <li>Never sends anything on your behalf</li>
+          <li>Nothing sends itself: mail leaves only when you press Send</li>
         </ul>
 
         {error && (

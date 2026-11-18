@@ -47,7 +47,9 @@ export const GET = route(async () => {
     status: provider === 'none' ? 'failed' : 'ok',
     detail:
       provider === 'none'
-        ? `AI_PROVIDER is "${env.AI_PROVIDER ?? 'auto'}" and no matching key is set.`
+        ? hasGemini && env.GEMINI_PAID_TIER?.trim().toLowerCase() !== 'true'
+          ? "GEMINI_API_KEY is set but GEMINI_PAID_TIER is not \"true\". The free tier may use what it is sent to improve Google's products, so mail is never sent to it. Enable billing on the key's Google Cloud project, then set GEMINI_PAID_TIER=true and redeploy."
+          : `AI_PROVIDER is "${env.AI_PROVIDER ?? 'auto'}" and no matching key is set.`
         : `${provider}${env.AI_PROVIDER ? ` (AI_PROVIDER=${env.AI_PROVIDER})` : ' (chosen automatically)'}`,
   });
 

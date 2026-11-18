@@ -21,7 +21,7 @@ const STEPS = [
   {
     n: '1',
     title: 'Connect Gmail',
-    body: 'One sign-in. We read your mail and calendar. We never send anything on your behalf — every send is a click you make inside Gmail.',
+    body: 'One sign-in. We read your mail and calendar, and nothing is ever sent unless you write it, read it and press Send.',
   },
   {
     n: '2',
@@ -97,7 +97,7 @@ export default function LandingPage() {
           </div>
 
           <p className="tiny muted" style={{ marginTop: 14 }}>
-            Free to start · Never sends mail on your behalf · Delete everything in one click
+            Free to start · Nothing sends itself · Delete everything in one click
           </p>
 
           {/* A picture of the product beats a description of it. */}

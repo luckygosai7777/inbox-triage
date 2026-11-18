@@ -179,9 +179,10 @@ checkout rather than after.
   high-volume, low-ambiguity route and where the volume is. Commitment
   extraction stays on the better model: a wrong answer there is a wrong row in
   someone's ledger, which is the whole product.
-- **Or run on Gemini's free tier entirely.** `GEMINI_API_KEY` costs nothing.
-  Read the privacy note first — Google may use free-tier content for product
-  improvement, and the content here is other people's email.
+- **Or run on Gemini's paid tier.** Set `GEMINI_API_KEY` and, once billing is
+  on for the key's project, `GEMINI_PAID_TIER=true`. Without that flag Gemini is
+  never used: on the free tier Google uses input to improve its products and
+  human reviewers may read it, and the content here is other people's email.
 - **Keep the per-sync caps.** They are the ceiling on what one user can cost in
   a day.
 - **Sync daily, not hourly.** Hourly multiplies the bill by 24 for little gain.
@@ -264,7 +265,7 @@ web/
       parsing.ts            headers, bodies, deadline extraction (pure)
       commitments.ts        the Ledger: extraction, ageing, resolution hints
       llm.ts                Claude calls with prompt-injection defence
-      gmail.ts              inbox + SENT sync, calendar, archive, trash
+      gmail.ts              inbox + SENT sync, calendar
       scheduler.ts          free-gap finding and reply packing
       search.ts             ranking
       composer.ts           bulk-send token substitution

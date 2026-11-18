@@ -235,7 +235,7 @@ export default function Settings() {
             <div className="card card-pad">
               <div className="h3">Privacy</div>
               <ul className="price-list mt-12">
-                <li>We never send email on your behalf</li>
+                <li>Nothing sends itself: mail leaves only when you press Send</li>
                 <li>Your Google token is encrypted before storage</li>
                 <li>Your mail is never used to train models</li>
                 <li>Row-level security isolates your data in the database</li>

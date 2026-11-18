@@ -93,20 +93,24 @@ function modelFor(tier: 'fast' | 'careful'): string {
  * Which provider answers.
  *
  * Anthropic wins when its key is present, because it is the path with the
- * structured-output guarantees and the refusal fallback. Gemini exists so the
- * app runs on a free key with no card attached — the difference between a tool
- * someone can try and one they cannot.
+ * structured-output guarantees and the refusal fallback.
+ *
+ * Gemini answers only on a paid key. It used to run on the free tier, which
+ * was wrong: free-tier input is used to improve Google's products and may be
+ * read by human reviewers, and this input is other people's email. With no
+ * paid provider every path falls back to the heuristics; only drafting stops.
  */
 export function activeProvider(): 'anthropic' | 'gemini' | 'none' {
   const config = env();
   if (!config.LLM_ENABLED) return 'none';
+  const gemini = Boolean(config.GEMINI_API_KEY) && config.GEMINI_PAID_TIER;
   // Naming a provider explicitly is taken at its word: it is the opt-in for a
   // machine whose credentials come from somewhere the env does not show, such
   // as a CLI profile in local development.
   if (config.AI_PROVIDER === 'anthropic') return 'anthropic';
-  if (config.AI_PROVIDER === 'gemini') return config.GEMINI_API_KEY ? 'gemini' : 'none';
+  if (config.AI_PROVIDER === 'gemini') return gemini ? 'gemini' : 'none';
   if (config.ANTHROPIC_API_KEY) return 'anthropic';
-  if (config.GEMINI_API_KEY) return 'gemini';
+  if (gemini) return 'gemini';
   // No key anywhere.
   //
   // This used to return 'anthropic' on the theory that the SDK might still find

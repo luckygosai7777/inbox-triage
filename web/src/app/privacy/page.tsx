@@ -28,14 +28,15 @@ export default function PrivacyPage() {
       <section className="marketing-section">
         <div className="prose">
           <h1>Privacy Policy</h1>
-          <p className="muted small">Last updated: {new Date().toISOString().slice(0, 10)}</p>
+          {/* A real revision date: change it whenever this text changes. */}
+          <p className="muted small">Last updated: 18 November 2026</p>
 
           <div className="callout">
             <p>
               <strong>The short version.</strong> We read your Gmail and calendar to work out what
-              you owe people and when you are free. We store the results against your account. We
-              never send email as you, never sell your data, and never use it to train models. One
-              button deletes all of it.
+              you owe people and when you are free. We store the results against your account. Mail
+              leaves your account only when you press Send on a message you have read. We never sell
+              your data, and never use it to train models. One button deletes all of it.
             </p>
           </div>
 
@@ -65,10 +66,11 @@ export default function PrivacyPage() {
           <p>When you connect your Google account, you grant these scopes:</p>
           <ul>
             <li>
-              <strong>gmail.modify</strong> — read message headers and bodies, and archive threads
-              you choose to archive. This scope permits sending, but{' '}
-              <strong>the application contains no send capability</strong>; replies open a Gmail
-              compose window for you to send yourself.
+              <strong>gmail.modify</strong> — read message headers and bodies in your inbox and
+              sent mail, and send a reply you have written or reviewed, from your own account, at
+              the moment you press Send. Nothing is ever sent automatically: there is no scheduled
+              send, no auto-reply, and no sending without you. We do not use it to archive, label
+              or delete mail.
             </li>
             <li>
               <strong>calendar.readonly</strong> — read event times on your primary calendar to find
@@ -105,7 +107,10 @@ export default function PrivacyPage() {
 
           <h2>4. What we never do</h2>
           <ul>
-            <li>We never send, forward or delete email on your behalf.</li>
+            <li>
+              We never send email you have not chosen to send, and we never forward, archive or
+              delete your email.
+            </li>
             <li>We never sell, rent or trade your data.</li>
             <li>
               We never use your email content to train, retrain or fine-tune any machine learning
@@ -134,7 +139,8 @@ export default function PrivacyPage() {
               to provide and improve the user-facing features described in this policy; we do not
               transfer it to third parties except as necessary to provide those features, for
               security purposes, or to comply with applicable law; we do not use it for advertising;
-              and we do not allow humans to read it unless we have your affirmative agreement for
+              we do not use it to develop, improve or train generalised artificial intelligence or
+              machine-learning models; and we do not allow humans to read it unless we have your affirmative agreement for
               specific messages, it is necessary for security or to comply with applicable law, or
               the data is aggregated and anonymised.
             </p>
@@ -151,9 +157,12 @@ export default function PrivacyPage() {
               <strong>Vercel</strong> — application hosting. Processes requests in transit.
             </li>
             <li>
-              <strong>Anthropic</strong> — the model that classifies messages and extracts
-              commitments. Message subjects, previews and body excerpts are sent for processing.
-              Anthropic does not train on data submitted through its API.
+              <strong>Anthropic (Claude API) or Google (Gemini API, paid tier)</strong> — the
+              language model that classifies messages, extracts commitments and drafts replies you
+              ask for. Message subjects, previews and body excerpts are sent for processing. Neither
+              provider uses data sent through these paid services to train its models, and we never
+              use a free tier that does. When neither is configured, sorting and the Ledger run on
+              rules inside our own service and no message content is sent to a model.
             </li>
             <li>
               <strong>Google</strong> — the source of your mail and calendar data.
@@ -217,8 +226,9 @@ export default function PrivacyPage() {
 
           <h2>10. Cookies</h2>
           <p>
-            We set one essential cookie to keep you signed in. We do not use advertising or
-            third-party tracking cookies.
+            We set only essential cookies: one to keep you signed in, and a short-lived one during
+            Google sign-in that protects it from forgery and is deleted when sign-in finishes. We do
+            not use advertising or third-party tracking cookies.
           </p>
 
           <h2>11. Children</h2>
