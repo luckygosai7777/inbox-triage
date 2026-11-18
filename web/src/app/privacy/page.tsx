@@ -66,11 +66,13 @@ export default function PrivacyPage() {
           <p>When you connect your Google account, you grant these scopes:</p>
           <ul>
             <li>
-              <strong>gmail.modify</strong> — read message headers and bodies in your inbox and
-              sent mail, and send a reply you have written or reviewed, from your own account, at
-              the moment you press Send. Nothing is ever sent automatically: there is no scheduled
-              send, no auto-reply, and no sending without you. We do not use it to archive, label
-              or delete mail.
+              <strong>gmail.readonly</strong> — read message headers and bodies in your inbox and
+              sent mail, to sort what arrived and find the promises you made.
+            </li>
+            <li>
+              <strong>gmail.send</strong> — send a reply you have written or reviewed, from your
+              own account, at the moment you press Send. Nothing is ever sent automatically: there
+              is no scheduled send, no auto-reply, and no sending without you.
             </li>
             <li>
               <strong>calendar.readonly</strong> — read event times on your primary calendar to find

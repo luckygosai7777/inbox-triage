@@ -12,8 +12,8 @@
  * no send-on-behalf, no automation path into this route. The model writes a
  * draft into a textarea; a human sends it.
  *
- * No new Google permission was needed: gmail.modify, which the app already
- * holds to archive and label, authorises users.messages.send.
+ * Authorised by gmail.send. Tokens granted before 2026-11-18 hold gmail.modify
+ * instead, which also covers users.messages.send.
  */
 import { z } from 'zod';
 

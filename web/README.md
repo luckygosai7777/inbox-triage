@@ -60,10 +60,15 @@ In [Google Cloud Console](https://console.cloud.google.com):
 
 1. Enable the **Gmail API** and **Google Calendar API**.
 2. **Credentials → Create OAuth client ID → Web application**.
-3. Authorised redirect URI:
-   `https://YOUR-PROJECT.supabase.co/auth/v1/callback`
-4. **OAuth consent screen** → add scopes `gmail.modify` and `calendar.readonly`,
-   and add yourself as a test user.
+3. Authorised redirect URIs: `https://YOUR-DOMAIN/auth/callback` and
+   `http://localhost:3000/auth/callback`. The app runs the Google flow itself
+   (`src/lib/oauth.ts`), so Google never redirects to supabase.co — a domain you
+   cannot verify, which blocks Google's brand verification.
+4. **OAuth consent screen** → add scopes `gmail.readonly`, `gmail.send` and
+   `calendar.readonly`, and add yourself as a test user.
+5. In **Supabase → Authentication → Providers → Google**, enable Google and put
+   the same client ID under *Client IDs*; Supabase verifies the ID token the app
+   hands it.
 
 ### 3. Local
 
@@ -92,8 +97,8 @@ vercel
 Set **Root Directory** to `web` in the Vercel project settings, add every
 variable from `.env.example` under **Settings → Environment Variables**, and set
 `APP_URL` to your production URL. Then add
-`https://your-app.vercel.app/auth/callback` to Supabase → Authentication → URL
-Configuration → Redirect URLs.
+`https://your-domain/auth/callback` to the Google OAuth client's authorised
+redirect URIs (step 2).
 
 ---
 
@@ -117,7 +122,7 @@ Signed in (noindex, gated by middleware)
 
 ## Before you can launch
 
-`gmail.modify` is a **restricted scope**. Google reviews it manually, and will
+`gmail.readonly` is a **restricted scope**. Google reviews it manually, and will
 reject an app that does not have all of:
 
 - [x] A public homepage explaining what the app does — `/`

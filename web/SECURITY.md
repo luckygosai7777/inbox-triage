@@ -238,6 +238,9 @@ Neither is sent to the client.
   — render as text. The CSP is the second layer.
 - **Open redirect:** the OAuth callback derives its redirect from
   `request.nextUrl.origin`, never from a query parameter.
+- **Login CSRF:** Google sign-in runs on our own domain (`lib/oauth.ts`) with a
+  random `state` and PKCE, both held in a 10-minute httpOnly cookie scoped to
+  the callback. A callback whose state does not match that cookie is refused.
 
 ## 12. Supply chain
 
@@ -262,10 +265,11 @@ Three things the code cannot do for you:
 
 Stated plainly rather than left for you to discover:
 
-- **Gmail scope is broad.** `gmail.modify` is needed to archive. If you only
-  ever sync, drop to `gmail.readonly` and the blast radius shrinks. It is a
-  Google-restricted scope requiring verification (and likely a security
-  assessment) before public launch.
+- **Gmail read access is a restricted scope.** The app asks for
+  `gmail.readonly` + `gmail.send` (narrowed from `gmail.modify` on 2026-11-18,
+  when archiving was found to have no screen). Read access to mail still
+  requires Google verification and a yearly CASA security assessment before
+  public launch.
 - **No audit log.** Who synced what and when is not recorded — and now that
   the app can send, neither is what was sent. This moved up the list when
   sending shipped: worth adding before anyone but you uses it.

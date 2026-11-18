@@ -2,19 +2,10 @@
 
 import { useState } from 'react';
 
-import { createBrowserClient } from '@supabase/ssr';
-
 /**
- * Sign-in.
- *
- * Scopes are requested up front so one consent screen covers reading mail and
- * the calendar. access_type=offline plus prompt=consent is what makes Google
- * return a refresh token — without both, background sync cannot work.
+ * Sign-in. The button hands over to /auth/google, which runs the Google flow
+ * on our own domain (scopes and the reason for that live in lib/oauth.ts).
  */
-const SCOPES = [
-  'https://www.googleapis.com/auth/gmail.modify',
-  'https://www.googleapis.com/auth/calendar.readonly',
-].join(' ');
 
 /**
  * Is Supabase configured? These are inlined at build time, so an unconfigured
@@ -32,27 +23,10 @@ export default function LoginPage() {
       : new URLSearchParams(window.location.search).get('error'),
   );
 
-  const signIn = async () => {
+  const signIn = () => {
     setBusy(true);
     setError(null);
-    try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      );
-      const { error: caught } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          scopes: SCOPES,
-          queryParams: { access_type: 'offline', prompt: 'consent' },
-        },
-      });
-      if (caught) throw caught;
-    } catch (caught) {
-      setError((caught as Error).message);
-      setBusy(false);
-    }
+    window.location.assign('/auth/google');
   };
 
   return (
