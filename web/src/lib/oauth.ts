@@ -35,6 +35,23 @@ export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
 ];
 
+/**
+ * Owed for Teams asks for less: read mail, and save drafts. It never sends
+ * (docs/AUDIT.md, D1), so no gmail.send and no calendar.
+ */
+export const TEAMS_SCOPES = [
+  'openid',
+  'email',
+  'profile',
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+];
+
+// The flow rides in `state`, which the callback only trusts after matching it
+// against the httpOnly cookie, so it cannot be switched by a forged link.
+const TEAMS_PREFIX = 'teams~';
+export const isTeamsState = (state: string | null) => Boolean(state?.startsWith(TEAMS_PREFIX));
+
 export const OAUTH_COOKIE = 'owed_oauth';
 // Scoped to the callback, the only route that needs to read it.
 export const OAUTH_COOKIE_PATH = '/auth/callback';
@@ -46,8 +63,8 @@ export const pkceChallenge = (verifier: string) =>
   createHash('sha256').update(verifier).digest('base64url');
 
 /** A fresh state + PKCE verifier, and the cookie value that carries them. */
-export function newAttempt() {
-  const state = randomBytes(24).toString('base64url');
+export function newAttempt(teams = false) {
+  const state = (teams ? TEAMS_PREFIX : '') + randomBytes(24).toString('base64url');
   const verifier = randomBytes(32).toString('base64url');
   return { state, verifier, cookie: `${state}.${verifier}` };
 }
@@ -66,12 +83,18 @@ export function readAttempt(cookie: string | undefined, state: string | null): s
 }
 
 /** Google's consent URL. offline + consent is what returns a refresh token. */
-export function authUrl(clientId: string, origin: string, state: string, verifier: string): string {
+export function authUrl(
+  clientId: string,
+  origin: string,
+  state: string,
+  verifier: string,
+  scopes = GOOGLE_SCOPES,
+): string {
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri(origin),
     response_type: 'code',
-    scope: GOOGLE_SCOPES.join(' '),
+    scope: scopes.join(' '),
     access_type: 'offline',
     prompt: 'consent',
     state,

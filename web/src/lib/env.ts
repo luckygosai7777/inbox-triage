@@ -69,6 +69,12 @@ const schema = z.object({
 
   // --- App ----------------------------------------------------------------
   TOKEN_ENCRYPTION_KEY: trimmed().default(''),
+  // Owed for Teams. Off unless set: only the teams Preview (its own staging
+  // database) turns it on, so Teams code never touches the production tables.
+  TEAMS_ENABLED: z
+    .string()
+    .default('false')
+    .transform((v) => v.toLowerCase() === 'true'),
   DEMO_MODE: z
     .string()
     .default('false')

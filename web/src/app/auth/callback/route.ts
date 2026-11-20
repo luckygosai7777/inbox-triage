@@ -14,8 +14,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { encryptSecret } from '@/lib/crypto';
-import { googleClient, OAUTH_COOKIE, OAUTH_COOKIE_PATH, readAttempt } from '@/lib/oauth';
+import { env } from '@/lib/env';
+import { googleClient, isTeamsState, OAUTH_COOKIE, OAUTH_COOKIE_PATH, readAttempt } from '@/lib/oauth';
 import { adminClient, serverClient } from '@/lib/supabase';
+import { connectTeamMailbox, TeamsSignInError } from '@/lib/teams/connect';
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -57,6 +59,25 @@ export async function GET(request: NextRequest) {
   if (error || !data.user) {
     console.error('[auth] Supabase rejected the Google ID token:', error?.message);
     return fail('Sign-in could not be completed. Please try again.');
+  }
+
+  // A Teams sign-in connects a team mailbox instead of the personal profile.
+  // The state was matched against our cookie above, so this flag is ours.
+  if (env().TEAMS_ENABLED && isTeamsState(params.get('state'))) {
+    try {
+      await connectTeamMailbox({
+        userId: data.user.id,
+        email: data.user.email ?? '',
+        name: (data.user.user_metadata?.full_name as string) ?? '',
+        idToken: tokens.id_token,
+        refreshToken: tokens.refresh_token,
+      });
+    } catch (caught) {
+      if (caught instanceof TeamsSignInError) return fail(caught.message);
+      console.error('[auth] connecting the team mailbox failed:', caught);
+      return fail('Your mailbox could not be connected. Please try again.');
+    }
+    return finish('/teams');
   }
 
   // Google returns a refresh token on consent (prompt=consent asks every time);

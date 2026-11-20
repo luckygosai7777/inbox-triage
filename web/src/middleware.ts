@@ -138,7 +138,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // Fresh per request. A reused nonce is no better than unsafe-inline.
   const nonce = crypto.randomUUID().replace(/-/g, '');
-  const isProtected = pathname === '/app' || pathname.startsWith('/app/');
+  const isProtected = /^\/(app|teams)(\/|$)/.test(pathname);
 
   // Demo mode: no auth at all, and /login is meaningless.
   if (demoMode()) {
