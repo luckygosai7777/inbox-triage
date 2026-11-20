@@ -152,3 +152,95 @@ export function TypeOnce({
     <Typed as={as} text={text} n={n} className={className} caret={start && n < text.length} accent={accent} />
   );
 }
+
+/** One edit in a Retype script: type text, select the last n characters, or pause. */
+export type Edit = { type: string } | { select: number } | { wait: number };
+
+/** What the script shows `ms` into playing it: the text so far and how much of its end is selected. */
+export function retypeAt(script: Edit[], ms: number, cps: number) {
+  let text = '';
+  let selected = 0;
+  let t = ms;
+  for (const step of script) {
+    if ('wait' in step) {
+      if (t < step.wait) return { text, selected, done: false };
+      t -= step.wait;
+    } else if ('select' in step) {
+      selected = step.select;
+    } else {
+      // Typing over a selection replaces it, as in any editor.
+      if (selected) text = text.slice(0, text.length - selected);
+      selected = 0;
+      const n = Math.floor((t / 1000) * cps);
+      if (n < step.type.length) return { text: text + step.type.slice(0, n), selected, done: false };
+      text += step.type;
+      t -= (step.type.length / cps) * 1000;
+    }
+  }
+  return { text, selected, done: true };
+}
+
+/**
+ * A headline that writes itself and changes its mind: the script types, selects and retypes,
+ * ending on `text`. The finished text is laid out underneath from the start, so nothing jumps;
+ * screen readers, reduced motion and no-JavaScript all get the finished text.
+ */
+export function Retype({
+  text,
+  script,
+  start,
+  cps = 30,
+  onDone,
+  className,
+}: {
+  text: string;
+  script: Edit[];
+  start: boolean;
+  cps?: number;
+  onDone?: () => void;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  const [frame, setFrame] = useState({ text: '', selected: 0, done: false });
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (!start) return;
+    const finish = () => {
+      if (!done.current) {
+        done.current = true;
+        onDone?.();
+      }
+    };
+    if (reduce) {
+      setFrame({ text, selected: 0, done: true });
+      finish();
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const f = retypeAt(script, now - t0, cps);
+      setFrame(f);
+      if (f.done) finish();
+      else raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [start]); // once per start; the script is fixed for a given element
+
+  const cut = frame.text.length - frame.selected;
+  return (
+    <h1 className={className}>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden className="tw:grid">
+        <span className="retype-final tw:col-start-1 tw:row-start-1">{text}</span>
+        <span className="retype-live tw:col-start-1 tw:row-start-1">
+          {frame.text.slice(0, cut)}
+          {frame.selected > 0 && <span className="tw:rounded-sm tw:bg-accent-soft">{frame.text.slice(cut)}</span>}
+          {start && !frame.done && <Caret />}
+        </span>
+      </span>
+    </h1>
+  );
+}

@@ -1,12 +1,7 @@
-import type { Viewport } from 'next';
 import { headers } from 'next/headers';
 
-import { sans, serif } from './fonts';
 import { INTRO_KEY } from './intro/played';
 import MotionProvider from './MotionProvider';
-
-/** The phone's status bar continues the beige page instead of the app's near-black. */
-export const PAPER_VIEWPORT: Viewport = { themeColor: '#f3ece0', colorScheme: 'light' };
 
 /*
  * Runs while the HTML is parsed, before first paint. It marks that JavaScript is on (the typed
@@ -30,8 +25,8 @@ const boot = (intro: boolean) =>
   `})()`;
 
 /**
- * Wraps a public page in the beige paper theme (see styles/index.css): it carries the theme's
- * fonts, and its presence switches the document's colours.
+ * Wraps a public page that animates: the inline script below, and motion that honours the
+ * reduced-motion setting. The .paper class scopes the no-JavaScript fallbacks in styles/index.css.
  */
 export default async function Paper({
   intro = false,
@@ -43,7 +38,7 @@ export default async function Paper({
   // The CSP allows only scripts carrying this request's nonce (middleware.ts).
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
-    <div className={`paper ${sans.variable} ${serif.variable}`}>
+    <div className="paper">
       {/* The browser blanks a nonce attribute once read, so hydration would see a mismatch. */}
       <script nonce={nonce} suppressHydrationWarning dangerouslySetInnerHTML={{ __html: boot(intro) }} />
       <MotionProvider>{children}</MotionProvider>

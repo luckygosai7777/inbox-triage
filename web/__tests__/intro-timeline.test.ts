@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { coverDistance, easeInOutCubic, easeOutBack, easeOutCubic, fitDistance, letterSize, segment } from "@/components/public/intro/timeline";
+import { retypeAt } from "@/components/public/type";
 
 describe("segment", () => {
   it("clamps to 0..1 and is linear inside", () => {
@@ -49,5 +50,17 @@ describe("letterSize", () => {
     expect(l.w).toBeLessThanOrEqual(box.w + 1e-9);
     expect(l.h).toBeLessThanOrEqual(box.h + 1e-9);
     expect(Math.max(l.w / box.w, l.h / box.h)).toBeCloseTo(1); // as large as fits
+  });
+});
+
+describe("retypeAt", () => {
+  const script = [{ type: "an inbox" }, { wait: 100 }, { select: 8 }, { wait: 100 }, { type: "a promise" }];
+  it("types, pauses, selects, then replaces the selection", () => {
+    expect(retypeAt(script, 0, 10).text).toBe("");
+    expect(retypeAt(script, 450, 10).text).toBe("an i");
+    expect(retypeAt(script, 850, 10)).toMatchObject({ text: "an inbox", selected: 0 });
+    expect(retypeAt(script, 950, 10)).toMatchObject({ text: "an inbox", selected: 8 });
+    expect(retypeAt(script, 1050 + 300, 10)).toMatchObject({ text: "a p", selected: 0 });
+    expect(retypeAt(script, 99999, 10)).toEqual({ text: "a promise", selected: 0, done: true });
   });
 });

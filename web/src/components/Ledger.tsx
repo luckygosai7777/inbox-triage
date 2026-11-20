@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { Cancelled, NoDate, Postmark } from './public/stamps';
 import { useToast } from './Shell';
 
 import { apiFetch } from '@/lib/http';
@@ -53,6 +54,25 @@ const STATE_COLOR: Record<Row['state'], string> = {
 };
 
 /** Plain language, no jargon. What a person would say out loud. */
+/**
+ * The row's stamp, as on the landing page: a postmark for a date the parser confirmed (cancelled
+ * in red once late), or the empty ring. A low-confidence row never gets a date it was not given.
+ */
+function Stamp({ row }: { row: Row }) {
+  if (!row.dueAt || row.state === 'undated' || row.confidence === 'low') {
+    return <NoDate className="ledger-stamp" />;
+  }
+  const due = new Date(row.dueAt);
+  const day = due.toLocaleDateString('en-GB', { weekday: 'short' }).toUpperCase();
+  const date = due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
+  return (
+    <span className="ledger-stamp is-dated">
+      <Postmark day={day} date={date} />
+      {row.state === 'overdue' && <Cancelled drawn={1} className="ledger-cancel" />}
+    </span>
+  );
+}
+
 function whenLabel(row: Row): string {
   if (row.state === 'undated') return 'No deadline given';
   if (!row.dueAt) return row.dueText || 'No deadline given';
@@ -226,9 +246,10 @@ export default function Ledger() {
         )}
 
         {!loading && !error && rows.length > 0 && (
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="ledger-slips">
             {rows.map((row) => (
-              <div key={row.id} className="ledger-row">
+              <div key={row.id} className="ledger-slip">
+              <div className="ledger-row slip">
                 <span className="ledger-rail" style={{ background: STATE_COLOR[row.state] }} />
 
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -314,6 +335,8 @@ export default function Ledger() {
                     )}
                   </div>
                 </div>
+                <Stamp row={row} />
+              </div>
               </div>
             ))}
           </div>

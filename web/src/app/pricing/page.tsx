@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import Footer from '@/components/Footer';
 import MarketingNav from '@/components/MarketingNav';
-import Paper, { PAPER_VIEWPORT } from '@/components/public/Paper';
+import Paper from '@/components/public/Paper';
 import { Faq, PricingCards, type Plan } from '@/components/public/sections';
 import { ScrollType, TypeOnce } from '@/components/public/type';
 
@@ -11,8 +11,6 @@ export const metadata: Metadata = {
   description: 'Free forever on the rules engine. ₹499 a month when you want the model.',
   robots: { index: true, follow: true },
 };
-
-export const viewport = PAPER_VIEWPORT;
 
 /*
  * WHAT A USER ACTUALLY COSTS

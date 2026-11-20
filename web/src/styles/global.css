@@ -4,71 +4,75 @@
    components use these classes and reserve inline styles for dynamic values. */
 
 /*
- * AURORA
+ * PAPER
  *
- * Near-black, with light in it. The previous theme was warm paper and read as
- * calm but static; this one is built so the surface itself is alive — a slow
- * gradient drifting behind everything, glass that picks up the colour under it,
- * and motion on anything that changes.
+ * Owed is about correspondence, so the whole site is set on it: warm beige
+ * paper, ivory for anything raised off it, ink for text, a navy accent (the
+ * wax seal) and the logo's green for "done". Violet is kept for the reply
+ * schedule's chart and red for late, so a colour always means one thing.
+ * Text contrast is checked on paper and on ivory; --text-faint is the floor
+ * at 4.65:1. It replaced Aurora (near-black with drifting light) on 2026-11-19.
  *
- * Four rules keep that from becoming noise:
- *
- *   1. The ground is never flat black. #08080C with a drifting aurora behind
- *      it, so two identical cards in different corners sit on different light.
- *      Pure #000 kills the glass effect entirely — there is nothing to refract.
- *   2. Surfaces are translucent white, not grey. rgba(255,255,255,0.04) over a
- *      coloured ground picks that colour up; a hardcoded #16161A cannot, and
- *      reads as a sticker on the page.
- *   3. Every raised surface gets an inset top highlight. One hairline of light
- *      along the top edge is what separates "glass" from "grey box" — it is the
- *      cheapest and most convincing depth cue there is.
- *   4. Colour is spent on one thing at a time. Violet is the brand, cyan is its
- *      partner in gradients only, and rose means late. Nothing else is coloured.
+ * The raw palette (--paper, --ink, ...) is what the Tailwind utilities on the
+ * public pages read (styles/index.css); the semantic tokens below it are what
+ * this file's components read. Change a colour in one place: the palette.
  */
 :root {
-  /* Ground. --bg-page is painted under the aurora layer. */
-  --bg-page: #08080c;
-  --bg-deep: #05050a;
+  --paper: #f3ece0;
+  --sheet: #fbf8f2;
+  --ink: #1b1828;
+  --ink-soft: #5e5668;
+  --ink-faint: #6f6678;
+  --rule: #e3d7c3;
+  --accent-soft: #e9dfcc;
+  --check: #1e9e6a; /* the logo's check, deepened for a light ground */
+  --ok: #1f7a55;
+  --ok-soft: #dcebdd;
+  --warn: #8a5a00;
+  --bad: #a63a2b; /* also the postmark red of a late promise */
+  --bad-soft: #f5ddd5;
+  --series: #6a52d6; /* charts; the muted grey below sits under 3:1, so it always carries a label */
+  --series-muted: #cbbfab;
 
-  /* Surfaces are alpha, so they take colour from the aurora beneath them. */
-  --bg-primary: rgba(255, 255, 255, 0.035);
-  --bg-secondary: rgba(255, 255, 255, 0.045);
-  --bg-tertiary: rgba(255, 255, 255, 0.075);
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-stripe: rgba(255, 255, 255, 0.025);
-  --bg-chip: rgba(255, 255, 255, 0.06);
+  --bg-page: var(--paper);
+  --bg-deep: #e9dfcc;
+  --bg-primary: var(--sheet);
+  --bg-secondary: var(--sheet);
+  --bg-tertiary: #efe6d6;
+  --bg-hover: rgba(43, 38, 69, 0.05);
+  --bg-stripe: rgba(43, 38, 69, 0.025);
+  --bg-chip: rgba(43, 38, 69, 0.06);
 
-  --text-primary: #f7f7fb;
-  --text-body: #d8d8e4;
-  --text-secondary: #a0a0b4;
-  --text-tertiary: #71718a;
-  --text-faint: #4e4e63;
+  --text-primary: var(--ink);
+  --text-body: #3a3446;
+  --text-secondary: var(--ink-soft);
+  --text-tertiary: var(--ink-faint);
+  --text-faint: var(--ink-faint);
 
-  --border-light: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
-  --border-input: rgba(255, 255, 255, 0.11);
-  --border-row: rgba(255, 255, 255, 0.05);
-  --border-danger: rgba(244, 63, 94, 0.35);
+  --border-light: var(--rule);
+  --border-medium: #d6c7ae;
+  --border-strong: #bba98c;
+  --border-input: #d6c7ae;
+  --border-row: #ebe1d0;
+  --border-danger: rgba(166, 58, 43, 0.35);
 
-  /* Violet is the brand; cyan only ever appears alongside it in a gradient. */
-  --accent: #8b6cff;
-  --accent-hover: #a189ff;
-  --accent-active: #7857f5;
-  --accent-ink: #0a0713;
-  --accent-wash: rgba(139, 108, 255, 0.14);
-  --accent-2: #22d3ee;
-  --gradient: linear-gradient(135deg, #8b6cff 0%, #22d3ee 100%);
+  --accent: #2b2645;
+  --accent-hover: #1d1932;
+  --accent-active: #15122a;
+  --accent-ink: #ffffff;
+  --accent-wash: var(--accent-soft);
+  --accent-2: var(--series);
+  --gradient: linear-gradient(135deg, #2b2645 0%, #3f3768 100%);
 
-  --danger: #fb7185;
-  --danger-wash: rgba(251, 113, 133, 0.12);
-  --danger-border: rgba(251, 113, 133, 0.3);
-  --warning: #fbbf24;
-  --success: #34d399;
+  --danger: var(--bad);
+  --danger-wash: var(--bad-soft);
+  --danger-border: rgba(166, 58, 43, 0.3);
+  --warning: var(--warn);
+  --success: var(--ok);
 
-  /* --font-inter/-grotesk/-plex are set by next/font on <html> (app/layout.tsx). */
-  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
-  --font-display: var(--font-grotesk), var(--font-inter), sans-serif;
+  /* --font-plex-sans/-source-serif/-grotesk/-plex are set by next/font on <html> (app/layout.tsx). */
+  --font-body: var(--font-plex-sans), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-source-serif), Georgia, serif;
   --font-mono: var(--font-plex), ui-monospace, monospace;
 
   --radius-sm: 7px;
@@ -76,23 +80,25 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  /* Depth on a dark ground comes from shadow plus an inset top highlight —
-     the highlight is what makes it read as glass rather than a grey box. */
-  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), var(--edge);
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), var(--edge);
-  --shadow-lift: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 108, 255, 0.18), var(--edge);
-  --glow: 0 0 24px rgba(139, 108, 255, 0.35);
+  /* Paper casts warm, soft shadows; one hairline of light on top reads as an
+     edge of card stock. */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-sm: 0 1px 2px rgba(91, 69, 32, 0.08);
+  --shadow: 0 8px 24px rgba(91, 69, 32, 0.1);
+  --shadow-lift: 0 18px 48px rgba(91, 69, 32, 0.16);
+  --glow: 0 6px 18px rgba(43, 38, 69, 0.22);
 
-  --blur: saturate(150%) blur(14px);
+  --blur: saturate(140%) blur(12px);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* The mark sits on dark now: light ring, and the check keeps its green. */
-  --logo-ink: #f7f7fb;
-  --logo-check: #34d399;
-  --logo-disc: rgba(52, 211, 153, 0.12);
+  --logo-ink: var(--ink);
+  --logo-check: var(--check);
+  --logo-disc: rgba(30, 158, 106, 0.14);
 
-  color-scheme: dark;
+  color-scheme: light;
+  /* The intro locks scrolling; a reserved gutter stops the page shifting when
+     the scrollbar comes back. */
+  scrollbar-gutter: stable;
 }
 
 * {
@@ -106,56 +112,6 @@ body,
   padding: 0;
   min-height: 100%;
   background: var(--bg-page);
-}
-
-/*
- * The living ground.
- *
- * Three large radial gradients on one fixed layer behind everything, drifting
- * on a slow loop. Animating `transform` rather than `background-position`
- * keeps it on the compositor, so it costs no layout and no paint — this can
- * run for an hour without heating a laptop.
- *
- * The blur is what stops three circles reading as three circles. The grain on
- * top of it is not decoration either: a gradient this wide and this dark bands
- * visibly on 8-bit displays, and a little noise hides it.
- */
-body::before {
-  content: '';
-  position: fixed;
-  inset: -25%;
-  z-index: -2;
-  background:
-    radial-gradient(38% 38% at 18% 22%, rgba(139, 108, 255, 0.3), transparent 62%),
-    radial-gradient(32% 32% at 82% 12%, rgba(34, 211, 238, 0.18), transparent 60%),
-    radial-gradient(45% 45% at 62% 82%, rgba(168, 85, 247, 0.2), transparent 64%),
-    radial-gradient(30% 30% at 8% 78%, rgba(34, 211, 238, 0.12), transparent 60%);
-  filter: blur(60px);
-  will-change: transform;
-  animation: aurora 28s ease-in-out infinite alternate;
-  pointer-events: none;
-}
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.035;
-  /* A tiny SVG feTurbulence, inlined so it costs no request. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-@keyframes aurora {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(3%, -2%, 0) scale(1.08);
-  }
-  100% {
-    transform: translate3d(-3%, 3%, 0) scale(1.04);
-  }
 }
 
 body {
@@ -178,7 +134,7 @@ a:hover {
 }
 
 ::selection {
-  background: rgba(139, 108, 255, 0.35);
+  background: var(--accent-soft);
 }
 
 ::-webkit-scrollbar {
@@ -308,9 +264,7 @@ button:disabled {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  /* Transparent on purpose: an opaque background here would cover the aurora
-     and leave the whole app flat. */
-  background: transparent;
+  background: transparent; /* the page's paper shows through */
   color: var(--text-body);
 }
 .shell-main {
@@ -325,7 +279,7 @@ button:disabled {
 
 .nav-rail {
   border-right: 1px solid var(--border-light);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-stripe);
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   display: flex;
@@ -519,7 +473,7 @@ a .card:hover,
 .btn-primary {
   border: 0;
   background: var(--gradient);
-  color: #0a0713;
+  color: var(--accent-ink);
   font-weight: 600;
   font-size: 14px;
   padding: 10px 18px;
@@ -538,7 +492,7 @@ a .card:hover,
 }
 .btn-primary:hover:not(:disabled) {
   background-position: 100% 50%;
-  color: #0a0713;
+  color: var(--accent-ink);
   box-shadow: var(--glow);
 }
 .btn-primary:active:not(:disabled) {
@@ -607,7 +561,7 @@ a .card:hover,
   background: var(--accent-wash);
   border-color: var(--accent);
   color: var(--text-primary);
-  box-shadow: 0 0 16px rgba(139, 108, 255, 0.25), var(--edge);
+  box-shadow: var(--shadow-sm), var(--edge);
 }
 .chip-sm {
   font-size: 12px;
@@ -678,7 +632,7 @@ a .card:hover,
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--bg-primary);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   padding: 0 12px;
@@ -1127,6 +1081,8 @@ a .card:hover,
     padding-bottom: max(6px, env(safe-area-inset-bottom));
     border-right: 0;
     border-top: 1px solid var(--border-light);
+    /* It floats over the list here, and a tint over paper lets the text show through. */
+    background: var(--sheet);
   }
   /* The wordmark is already in the page; the bar is for navigation. */
   .nav-logo,
@@ -1267,7 +1223,50 @@ a .card:hover,
   gap: 12px;
   align-items: flex-start;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border-row);
+}
+/* Each promise is a slip on the paper, as on the landing page: no rules between rows. The slip's
+   punched edge is a mask (styles/index.css .slip), which would clip its own shadow, so the shadow
+   lives on the wrapper. */
+.ledger-slips {
+  display: grid;
+  gap: 10px;
+}
+.ledger-slip {
+  filter: drop-shadow(0 6px 12px rgba(91, 69, 32, 0.1));
+}
+.ledger-slips .ledger-row {
+  background: var(--bg-primary);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding-top: 18px;
+}
+.ledger-stamp {
+  position: relative;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  color: var(--text-faint);
+  transform: rotate(-6deg);
+}
+.ledger-stamp.is-dated {
+  color: var(--accent);
+  opacity: 0.85;
+  transform: rotate(8deg);
+}
+.ledger-stamp svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ledger-cancel {
+  position: absolute;
+  inset: 50% 0 auto;
+  transform: translateY(-50%) rotate(-14deg);
+}
+@media (max-width: 619px) {
+  .ledger-stamp {
+    width: 48px;
+    height: 48px;
+  }
 }
 .ledger-row:hover {
   background: var(--bg-hover);
@@ -1455,7 +1454,7 @@ a .card:hover,
   width: 100%;
   min-height: 140px;
   resize: vertical;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-primary);
   border: 1px solid var(--border-input);
   border-radius: var(--radius);
   color: var(--text-body);
@@ -1706,7 +1705,7 @@ a .card:hover,
   outline: none;
   resize: vertical;
   min-height: 200px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-primary);
   color: var(--text-body);
   font-family: var(--font-body);
   font-size: 14px;

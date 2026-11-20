@@ -4,21 +4,9 @@ import type { Metadata } from 'next';
 import MarketingNav from '@/components/MarketingNav';
 import Footer from '@/components/Footer';
 import IntroGate from '@/components/public/IntroGate';
-import Paper, { PAPER_VIEWPORT } from '@/components/public/Paper';
-import {
-  Chapter,
-  CompareTable,
-  ConnectViz,
-  ExtractViz,
-  Faq,
-  LandingHero,
-  ListViz,
-  ProblemCards,
-  ScheduleViz,
-  SectionIntro,
-  TrustGrid,
-  type TrustIcon,
-} from '@/components/public/sections';
+import Paper from '@/components/public/Paper';
+import { CompareTable, Faq, LandingHero, ProblemCards, SectionIntro, TrustGrid, type TrustIcon } from '@/components/public/sections';
+import { HowItWorks } from '@/components/public/story';
 import { ScrollType } from '@/components/public/type';
 
 export const metadata: Metadata = {
@@ -33,8 +21,6 @@ export const metadata: Metadata = {
     type: 'website',
   },
 };
-
-export const viewport = PAPER_VIEWPORT;
 
 const PROBLEMS = [
   {
@@ -148,19 +134,7 @@ export default function LandingPage() {
           </section>
 
           {/* -------------------------------------------------- how it works */}
-          <section className="tw:pt-16 tw:lg:pt-24">
-            <SectionIntro id="how" title="How it works" />
-            <Chapter n={1} title={STEPS[0].title} body={STEPS[0].body}>
-              <ConnectViz />
-            </Chapter>
-            <Chapter n={2} flip title={STEPS[1].title} body={STEPS[1].body}>
-              <ExtractViz />
-            </Chapter>
-            <Chapter n={3} title={STEPS[2].title} body={STEPS[2].body}>
-              <ListViz />
-              <ScheduleViz />
-            </Chapter>
-          </section>
+          <HowItWorks steps={STEPS} />
 
           {/* ---------------------------------------------------- comparison */}
           <section className="tw:py-16 tw:lg:py-24">
@@ -199,13 +173,13 @@ export default function LandingPage() {
 
           {/* ----------------------------------------------------------- cta */}
           <section className="tw:px-6 tw:pb-28 tw:pt-8">
-            <div className="tw:mx-auto tw:max-w-4xl tw:rounded-3xl tw:bg-sheet tw:px-6 tw:py-14 tw:text-center tw:shadow-xl tw:shadow-[#5b4520]/10 tw:sm:px-12">
+            <div className="tw:mx-auto tw:max-w-3xl tw:text-center">
               <ScrollType
                 as="h2"
                 text="Find out what you’ve forgotten"
                 from="start 95%"
                 to="start 60%"
-                className="tw:font-serif tw:text-[2rem] tw:font-semibold tw:leading-tight tw:tracking-tight tw:text-ink tw:sm:text-[2.6rem]"
+                className="tw:font-serif tw:text-[2.4rem] tw:font-semibold tw:leading-tight tw:tracking-tight tw:text-ink tw:sm:text-6xl"
               />
               <p className="tw:mx-auto tw:mt-4 tw:max-w-xl tw:text-lg tw:leading-8 tw:text-ink-soft">
                 Most people are surprised by the first list. Takes about a minute to find out.
