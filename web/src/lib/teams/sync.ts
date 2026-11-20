@@ -102,6 +102,20 @@ export async function withBackoff<T>(
 
 // ----------------------------------------------------------------- I/O side
 
+/** An authorised Google client for one team mailbox, from its encrypted token. */
+export async function teamAuth(mailboxId: string) {
+  const { data: token } = await (adminClient() as any)
+    .from('mailbox_tokens')
+    .select('refresh_token_enc')
+    .eq('mailbox_id', mailboxId)
+    .maybeSingle();
+  if (!token) throw new Error('This mailbox has no Google token. Reconnect it.');
+  const config = env();
+  const auth = new google.auth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET);
+  auth.setCredentials({ refresh_token: decryptSecret(token.refresh_token_enc) });
+  return auth;
+}
+
 export type MailboxSyncResult = { status: 'locked' | 'ok' | 'backfilling' | 'error'; messages: number; rows: number };
 
 const LOCK_MS = 5 * 60_000;
@@ -125,16 +139,14 @@ export async function syncTeamMailbox(mailboxId: string, budgetMs = 45_000): Pro
   let result: MailboxSyncResult = { status: 'ok', messages: 0, rows: 0 };
   const update: Record<string, unknown> = {};
   try {
-    const [{ data: org }, { data: token }] = await Promise.all([
-      db.from('orgs').select('primary_domain, extra_domains, settings').eq('id', mailbox.org_id).single(),
-      db.from('mailbox_tokens').select('refresh_token_enc').eq('mailbox_id', mailbox.id).single(),
-    ]);
-    if (!org || !token) throw new Error('mailbox has no org or token');
+    const { data: org } = await db
+      .from('orgs')
+      .select('primary_domain, extra_domains, settings')
+      .eq('id', mailbox.org_id)
+      .single();
+    if (!org) throw new Error('mailbox has no org');
     const domains: string[] = [org.primary_domain, ...(org.extra_domains ?? [])];
-    const config = env();
-    const auth = new google.auth.OAuth2(config.GOOGLE_CLIENT_ID, config.GOOGLE_CLIENT_SECRET);
-    auth.setCredentials({ refresh_token: decryptSecret(token.refresh_token_enc) });
-    const gmail = google.gmail({ version: 'v1', auth });
+    const gmail = google.gmail({ version: 'v1', auth: await teamAuth(mailbox.id) });
     const outOfTime = () => Date.now() - started > budgetMs;
 
     let ids: string[] = [];

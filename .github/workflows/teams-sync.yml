@@ -1,0 +1,36 @@
+# Owed for Teams: incremental mailbox sync every 15 minutes.
+#
+# Vercel Hobby cron runs only once a day, so GitHub Actions (free for public
+# repos) calls the bearer-protected route instead. It does nothing until the
+# repo secrets are set (Settings -> Secrets and variables -> Actions):
+#   TEAMS_SYNC_URL     e.g. https://inbox-triage-git-teams-lucky-01ea.vercel.app/api/cron/teams-sync
+#   TEAMS_CRON_SECRET  the CRON_SECRET of that deployment
+#   VERCEL_BYPASS      optional: "Protection Bypass for Automation" secret, for protected Preview URLs
+# Note: GitHub runs `schedule` only from the default branch's copy of this file.
+name: Teams sync
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call the Teams sync route
+        env:
+          URL: ${{ secrets.TEAMS_SYNC_URL }}
+          SECRET: ${{ secrets.TEAMS_CRON_SECRET }}
+          BYPASS: ${{ secrets.VERCEL_BYPASS }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "TEAMS_SYNC_URL / TEAMS_CRON_SECRET not set; skipping."
+            exit 0
+          fi
+          args=(--fail-with-body -sS -m 70 -H "Authorization: Bearer $SECRET")
+          if [ -n "$BYPASS" ]; then args+=(-H "x-vercel-protection-bypass: $BYPASS"); fi
+          curl "${args[@]}" "$URL"
