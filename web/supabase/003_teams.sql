@@ -50,6 +50,8 @@ create table if not exists public.mailboxes (
   member_id           uuid references public.members(id) on delete set null,
   email               text not null check (email = lower(email)),
   history_id          text,
+  -- Where an unfinished backfill resumes: one run fits inside a 60s function.
+  backfill_page_token text,
   sync_status         text not null default 'pending'
                       check (sync_status in ('pending', 'backfilling', 'ok', 'error', 'disconnected')),
   sync_error          text not null default '',
@@ -115,12 +117,13 @@ create table if not exists public.ledger_rows (
   status            text not null default 'open'
                     check (status in ('open', 'done', 'dismissed', 'reassigned')),
   confidence        text not null default 'low' check (confidence in ('high', 'low')),
+  quote_hash        text generated always as (md5(source_quote)) stored,
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  -- The same client email in three teammates' inboxes is one row, not three.
+  -- A real constraint (not an expression index) so upserts can target it.
+  constraint ledger_rows_dedupe unique (org_id, direction, source_message_id, quote_hash)
 );
--- The same client email in three teammates' inboxes is one row, not three.
-create unique index if not exists ledger_rows_dedupe
-  on public.ledger_rows (org_id, direction, source_message_id, md5(source_quote));
 create index if not exists ledger_rows_open_idx on public.ledger_rows (org_id, status, deadline);
 create index if not exists ledger_rows_thread_idx on public.ledger_rows (org_id, thread_key);
 
@@ -220,11 +223,12 @@ create policy mailboxes_owner_update on public.mailboxes
 create policy clients_read on public.clients
   for select using (public.org_role(org_id) is not null);
 
--- Your own mailbox's rows, plus, for managers and admins, rows from mailboxes
--- whose owners opted in.
+-- Rows you own (including ones reassigned to you), your own mailbox's rows,
+-- plus, for managers and admins, rows from mailboxes whose owners opted in.
 create policy ledger_rows_read on public.ledger_rows
   for select using (
-    exists (
+    owner_member_id in (select public.my_member_ids())
+    or exists (
       select 1 from public.mailboxes m
       where m.id = ledger_rows.mailbox_id
         and (
